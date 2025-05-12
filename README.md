@@ -1,7 +1,3 @@
-# oss
-
-2025 OSS Term Projects
-
 ## Getting Started
 
 This project is a starting point for a Flutter application.
