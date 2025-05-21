@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import 'test000.dart';
-import 'test001.dart';
-import 'test002.dart';
+import 'configuration.dart';
+
+import 'calendarPage.dart';
+import 'timerPage.dart';
+import 'settingsPage.dart';
+import 'alarmPage.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   var _index = 1;
 
-  int timercho = 10;
+  int timercho = 0;
   late Timer _timer;
 
   void startTimer() {
@@ -63,9 +66,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   List<Widget> _pages = [
-    test000(),
-    test001(),
-    test002()
+    CalendarPage(),
+    TimerPage(),
+    SettingsPage()
   ];
 
   @override
@@ -102,27 +105,9 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       endDrawer: SizedBox(
         width: MediaQuery.of(context).size.width,
-        // child: const alarmPage()
+        child: const AlarmPage()
       ),
       body: _pages[_index],
-      // body: Center(
-      //   child: Column(
-      //     mainAxisAlignment: MainAxisAlignment.center,
-      //     crossAxisAlignment: CrossAxisAlignment.center,
-      //     children: <Widget>[
-      //       Text('$timercho'),
-      //       ElevatedButton(
-      //         onPressed: () {
-      //           if (!_timer.isActive) {
-      //             timercho = 10;
-      //             startTimer();
-      //           }
-      //         },
-      //         child: Text(_timer.isActive ? '타이머 실행 중' : '타이머 시작')
-      //       )
-      //     ],
-      //   ),
-      // ),
       // floatingActionButton: FloatingActionButton(
       //   onPressed: _incrementCounter,
       //   tooltip: 'Increment',
