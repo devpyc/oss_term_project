@@ -1,6 +1,8 @@
 // import 'package:flutter/material.dart';
 
 class StaticVariableSet {
-  static int a = 0;
-  static String b = "";
+  // 타이머 기본값
+  static int timerTimework = 1500;
+  static int timerTimebreak = 300;
+  // static String b = "";
 }

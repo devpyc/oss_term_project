@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import 'configuration.dart';
-
+// import 'configuration.dart';
 import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
