@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({Key? key}) : super(key: key);
@@ -20,8 +22,42 @@ class _CalendarPageState extends State<CalendarPage> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _loadEvents(); // 일정 불러오기
   }
 
+  Future<void> _loadEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final eventsJson = prefs.getString('calendar_events');
+
+    if (eventsJson != null) {
+      final Map<String, dynamic> eventsMap = json.decode(eventsJson);
+
+      eventsMap.forEach((dateString, eventsList) {
+        final date = DateTime.parse(dateString);
+        final events = (eventsList as List)
+            .map((eventJson) => Event.fromJson(eventJson))
+            .toList();
+        _events[date] = events;
+      });
+
+      setState(() {});
+    }
+  }
+
+  // 로컬에 일정 저장
+  Future<void> _saveEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final Map<String, dynamic> eventsMap = {};
+    _events.forEach((date, events) {
+      eventsMap[date.toIso8601String()] =
+          events.map((event) => event.toJson()).toList();
+    });
+
+    await prefs.setString('calendar_events', json.encode(eventsMap));
+  }
+
+  // 선택한 날짜 일정 불러오기
   List<Event> _getEventsForDay(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
     return _events[normalizedDay] ?? [];
@@ -63,7 +99,6 @@ class _CalendarPageState extends State<CalendarPage> {
             },
           ),
           const SizedBox(height: 8.0),
-          // 일정 목록 위젯
           Expanded(
             child: _buildEventList(),
           ),
@@ -91,10 +126,11 @@ class _CalendarPageState extends State<CalendarPage> {
             leading: Checkbox(
               value: event.isCompleted,
               onChanged: _selectedDay!.isBefore(DateTime.now())
-                  ? (value) {
+                  ? (value) async {
                 setState(() {
                   event.isCompleted = value!;
                 });
+                await _saveEvents(); // 변경사항 저장
               }
                   : null,
             ),
@@ -102,10 +138,11 @@ class _CalendarPageState extends State<CalendarPage> {
             subtitle: Text('${event.startTime} - ${event.endTime}'),
             trailing: IconButton(
               icon: const Icon(Icons.delete),
-              onPressed: () {
+              onPressed: () async {
                 setState(() {
                   _getEventsForDay(_selectedDay!).remove(event);
                 });
+                await _saveEvents(); // 변경사항 저장
               },
             ),
           ),
@@ -123,78 +160,83 @@ class _CalendarPageState extends State<CalendarPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('일정 추가'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(
-                  labelText: '제목',
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('${DateFormat('yyyy-MM-dd').format(day)} 일정 추가'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: '일정 제목',
+                    ),
+                  ),
+                  const SizedBox(height: 16.0),
+
+                  ListTile(
+                    title: const Text('시작 시간'),
+                    subtitle: Text(startTime),
+                    trailing: const Icon(Icons.arrow_drop_down),
+                    onTap: () {
+                      _showTimeSelectionDialog(context, startTime, (selectedTime) {
+                        setDialogState(() {
+                          startTime = selectedTime;
+                        });
+                      });
+                    },
+                  ),
+
+                  ListTile(
+                    title: const Text('종료 시간'),
+                    subtitle: Text(endTime),
+                    trailing: const Icon(Icons.arrow_drop_down),
+                    onTap: () {
+                      _showTimeSelectionDialog(context, endTime, (selectedTime) {
+                        setDialogState(() {
+                          endTime = selectedTime;
+                        });
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('취소'),
                 ),
-              ),
-              const SizedBox(height: 16.0),
+                TextButton(
+                  onPressed: () async {
+                    if (titleController.text.isNotEmpty) {
+                      final normalizedDay = DateTime(day.year, day.month, day.day);
 
-              ListTile(
-                title: const Text('시작 시간'),
-                subtitle: Text(startTime),
-                trailing: const Icon(Icons.arrow_drop_down),
-                onTap: () {
-                  _showTimeSelectionDialog(context, startTime, (selectedTime) {
-                    setState(() {
-                      startTime = selectedTime;
-                    });
-                  });
-                },
-              ),
+                      if (_events[normalizedDay] == null) {
+                        _events[normalizedDay] = [];
+                      }
 
-              ListTile(
-                title: const Text('종료 시간'),
-                subtitle: Text(endTime),
-                trailing: const Icon(Icons.arrow_drop_down),
-                onTap: () {
-                  _showTimeSelectionDialog(context, endTime, (selectedTime) {
-                    setState(() {
-                      endTime = selectedTime;
-                    });
-                  });
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty) {
-                  final normalizedDay = DateTime(day.year, day.month, day.day);
+                      setState(() {
+                        _events[normalizedDay]!.add(
+                          Event(
+                            title: titleController.text,
+                            startTime: startTime,
+                            endTime: endTime,
+                          ),
+                        );
+                      });
 
-                  if (_events[normalizedDay] == null) {
-                    _events[normalizedDay] = [];
-                  }
-
-                  setState(() {
-                    _events[normalizedDay]!.add(
-                      Event(
-                        title: titleController.text,
-                        startTime: startTime,
-                        endTime: endTime,
-                      ),
-                    );
-                  });
-
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('추가'),
-            ),
-          ],
+                      await _saveEvents();
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('추가'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -205,7 +247,7 @@ class _CalendarPageState extends State<CalendarPage> {
       String currentTime,
       Function(String) onTimeSelected
       ) {
-
+    // 현재 시간 파싱
     final parts = currentTime.split(':');
     int currentHour = int.parse(parts[0]);
     int currentMinute = int.parse(parts[1]);
@@ -355,4 +397,23 @@ class Event {
     required this.endTime,
     this.isCompleted = false,
   });
+
+  // to json
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'startTime': startTime,
+      'endTime': endTime,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory Event.fromJson(Map<String, dynamic> json) {
+    return Event(
+      title: json['title'],
+      startTime: json['startTime'],
+      endTime: json['endTime'],
+      isCompleted: json['isCompleted'] ?? false,
+    );
+  }
 }
