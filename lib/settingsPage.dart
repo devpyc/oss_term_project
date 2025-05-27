@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'main.dart'; // isDarkModeNotifier 때문에 추가
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -8,13 +9,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool isDarkMode = false;
   String? selectedTheme = '기본 테마';
   String? selectedSound = '벨소리 1';
   String? selectedVibration = '보통';
   TextEditingController customTimeController = TextEditingController(text: '25');
   TextEditingController customTimeController2 = TextEditingController(text: '5');
-  
 
   final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
@@ -34,9 +33,11 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildCard(
             child: SwitchListTile(
               title: const Text('다크모드'),
-              value: isDarkMode,
+              value: isDarkModeNotifier.value,
               onChanged: (val) {
-                setState(() => isDarkMode = val);
+                setState(() {
+                  isDarkModeNotifier.value = val;
+                });
               },
             ),
           ),
@@ -94,8 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: TextField(
                 controller: customTimeController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                ),
+                decoration: const InputDecoration(),
               ),
             ),
           ),
@@ -105,8 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: TextField(
                 controller: customTimeController2,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                ),
+                decoration: const InputDecoration(),
               ),
             ),
           ),
@@ -133,7 +132,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // 섹션 제목 (예: 화면, 알림, 타이머 등)
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -148,11 +146,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // 카드 형태의 리스트 항목 UI
   Widget _buildCard({required Widget child}) {
     return Card(
-      elevation: 2,//그림자 깊이
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),//카드 모서리 둥글게
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
