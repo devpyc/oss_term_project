@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
-
-// import 'configuration.dart';
+import 'configuration.dart';
 import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
 import 'alarmPage.dart';
+import 'package:flutter/services.dart'; //다크모드
+final ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false); //다크모드
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,13 +23,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Pomodoro Timer'),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkModeNotifier,
+      builder: (context, isDarkMode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Pomodoro Timer',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const MyHomePage(title: 'Pomodoro Timer'),
+        );
+      },
     );
   }
 }
