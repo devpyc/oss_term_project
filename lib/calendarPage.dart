@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class CalendarPage extends StatefulWidget {
-  const CalendarPage({Key? key}) : super(key: key);
+  const CalendarPage({super.key});
 
   @override
   _CalendarPageState createState() => _CalendarPageState();
@@ -262,7 +262,7 @@ class _CalendarPageState extends State<CalendarPage> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('시간 선택'),
-              content: Container(
+              content: SizedBox(
                 width: double.maxFinite,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -273,7 +273,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         children: [
                           const Text('시', style: TextStyle(fontWeight: FontWeight.bold)),
                           const Divider(),
-                          Container(
+                          SizedBox(
                             height: 200,
                             child: ListView.builder(
                               itemCount: hours.length,
@@ -321,7 +321,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         children: [
                           const Text('분', style: TextStyle(fontWeight: FontWeight.bold)),
                           const Divider(),
-                          Container(
+                          SizedBox(
                             height: 200,
                             child: ListView.builder(
                               itemCount: minutes.length,

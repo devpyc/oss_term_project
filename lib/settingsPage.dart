@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // isDarkModeNotifier 때문에 추가
+import 'streak_manager.dart'; //  streak import
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -19,13 +20,14 @@ class _SettingsPageState extends State<SettingsPage> {
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
   final vibrations = ['없음', '약함', '보통', '강함'];
 
+  // streak 관련 변수 (예시로 임의 값 사용, 실제로는 streak_manager에서 관리 ㄱㄴ)
+  int currentStreak = 1;
+  int maxStreak = 30;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('설정'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
+
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -53,6 +55,38 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() => selectedTheme = val);
                 },
               ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          _buildSectionTitle('스트릭 (Streak)'),
+          _buildCard(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '현재 스트릭',
+                  style: TextStyle(fontSize: 16),
+                ),
+                Row(
+                  children: List.generate(maxStreak, (index) {
+                    
+                    bool filled = index < currentStreak;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Icon(
+                        Icons.circle,
+                        size: 14,
+                        color: filled ? Colors.lightGreenAccent : Colors.grey[300],
+                      ),
+                    );
+                  }),
+                ),
+                Text(
+                  '$currentStreak / $maxStreak',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
             ),
           ),
 

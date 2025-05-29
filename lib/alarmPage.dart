@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class AlarmPage extends StatefulWidget {
-  const AlarmPage({Key? key}) : super(key: key);
+  const AlarmPage({super.key});
 
   @override
   _CalendarPageState createState() => _CalendarPageState();
@@ -219,7 +219,7 @@ class _CalendarPageState extends State<AlarmPage> {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('시간 선택'),
-              content: Container(
+              content: SizedBox(
                 width: double.maxFinite,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -230,7 +230,7 @@ class _CalendarPageState extends State<AlarmPage> {
                         children: [
                           const Text('시', style: TextStyle(fontWeight: FontWeight.bold)),
                           const Divider(),
-                          Container(
+                          SizedBox(
                             height: 200,
                             child: ListView.builder(
                               itemCount: hours.length,
@@ -278,7 +278,7 @@ class _CalendarPageState extends State<AlarmPage> {
                         children: [
                           const Text('분', style: TextStyle(fontWeight: FontWeight.bold)),
                           const Divider(),
-                          Container(
+                          SizedBox(
                             height: 200,
                             child: ListView.builder(
                               itemCount: minutes.length,

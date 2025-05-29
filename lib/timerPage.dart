@@ -6,6 +6,8 @@ import 'package:vibration/vibration.dart';
 import 'configuration.dart';
 
 class TimerPage extends StatefulWidget {
+  const TimerPage({super.key});
+
 
   @override
   State<TimerPage> createState() => _TimerPageState();
@@ -151,11 +153,11 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
               children: [
                 ElevatedButton(
                   onPressed: reset,
-                  child: Icon(Icons.replay),
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                   ),
+                  child: Icon(Icons.replay),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -166,19 +168,19 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                     }
                     setState(() {});
                   },
-                  child: Icon(isRunning ? Icons.pause : Icons.play_arrow),
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                   ),
+                  child: Icon(isRunning ? Icons.pause : Icons.play_arrow),
                 ),
                 ElevatedButton(
                     onPressed: pause,
-                    child: Icon(Icons.stop),
                     style: ElevatedButton.styleFrom(
                       shape: CircleBorder(),
                       padding: EdgeInsets.all(20),
                     ),
+                    child: Icon(Icons.stop),
                   ),
               ],
             ),
