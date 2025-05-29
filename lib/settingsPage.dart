@@ -1,13 +1,76 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // isDarkModeNotifier 때문에 추가
 import 'streak_manager.dart'; //  streak import
-
+import 'package:flutter/cupertino.dart'; //시간 설정 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
+class TimePickerWidget extends StatefulWidget {
+  final String label;
+  final int initialValue;
+  final Function(int) onSelected;
+
+  const TimePickerWidget({
+    super.key,
+    required this.label,
+    required this.initialValue,
+    required this.onSelected,
+  });
+
+  @override
+  State<TimePickerWidget> createState() => _TimePickerWidgetState();
+}
+
+class _TimePickerWidgetState extends State<TimePickerWidget> {
+  final List<int> timeOptions = List.generate(24, (i) => (i + 1) * 5);
+  late FixedExtentScrollController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final index = timeOptions.indexOf(widget.initialValue);
+    controller = FixedExtentScrollController(initialItem: index >= 0 ? index : 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.label, style: const TextStyle(fontSize: 16)),
+          SizedBox(
+            height: 100,
+            child: CupertinoPicker(
+              scrollController: controller,
+              itemExtent: 32,
+              onSelectedItemChanged: (index) {
+                widget.onSelected(timeOptions[index]);
+              },
+              children: timeOptions.map((t) => Center(child: Text('$t분'))).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: child,
+      ),
+    );
+  }
+}
+
 
 class _SettingsPageState extends State<SettingsPage> {
   String? selectedTheme = '기본 테마';
@@ -125,25 +188,46 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
           _buildCard(
-            child: ListTile(
-              title: const Text('집중 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('집중 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) {
+                      int value = (index + 1) * 5;
+                      print('집중 시간: $value분');
+                      // 여기서 값 저장 가능
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
+                ),
+              ],
             ),
           ),
           _buildCard(
-            child: ListTile(
-              title: const Text('휴식 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController2,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('휴식 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) {
+                      int value = (index + 1) * 5;
+                      print('휴식 시간: $value분');
+                      // 여기서 값 저장 가능
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
+                ),
+              ],
             ),
           ),
+
 
           const SizedBox(height: 24),
           _buildSectionTitle('기타'),
