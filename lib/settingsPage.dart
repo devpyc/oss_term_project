@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // isDarkModeNotifier 때문에 추가
-import 'streak_manager.dart'; //  streak import
-import 'package:flutter/cupertino.dart'; //시간 설정 
+import 'package:streakify/streakify.dart'; // streakify 추가
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -9,123 +8,30 @@ class SettingsPage extends StatefulWidget {
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
-class TimePickerWidget extends StatefulWidget {
-  final String label;
-  final int initialValue;
-  final Function(int) onSelected;
-
-  const TimePickerWidget({
-    super.key,
-    required this.label,
-    required this.initialValue,
-    required this.onSelected,
-  });
-
-  @override
-  State<TimePickerWidget> createState() => _TimePickerWidgetState();
-}
-
-class _TimePickerWidgetState extends State<TimePickerWidget> {
-  final List<int> timeOptions = List.generate(24, (i) => (i + 1) * 5);
-  late FixedExtentScrollController controller;
-
-  @override
-  void initState() {
-    super.initState();
-    final index = timeOptions.indexOf(widget.initialValue);
-    controller = FixedExtentScrollController(initialItem: index >= 0 ? index : 0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.label, style: const TextStyle(fontSize: 16)),
-          SizedBox(
-            height: 100,
-            child: CupertinoPicker(
-              scrollController: controller,
-              itemExtent: 32,
-              onSelectedItemChanged: (index) {
-                widget.onSelected(timeOptions[index]);
-              },
-              children: timeOptions.map((t) => Center(child: Text('$t분'))).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCard({required Widget child}) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: child,
-      ),
-    );
-  }
-}
-
 
 class _SettingsPageState extends State<SettingsPage> {
-   //String? selectedTheme = '기본 테마';
+  String? selectedTheme = '기본 테마';
   String? selectedSound = '벨소리 1';
   String? selectedVibration = '보통';
   TextEditingController customTimeController = TextEditingController(text: '25');
   TextEditingController customTimeController2 = TextEditingController(text: '5');
 
-  // final themes = ['기본 테마', '파란 테마', '녹색 테마'];
+  final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
   final vibrations = ['없음', '약함', '보통', '강함'];
 
-  // streak 관련 변수 (예시로 임의 값 사용, 실제로는 streak_manager에서 관리 ㄱㄴ)
-  int currentStreak = 7;
-  int maxStreak = 30;
+  final int numberOfDays = 30;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-                    const SizedBox(height: 24),
+          const SizedBox(height: 24),
           _buildSectionTitle('스트릭 (Streak)'),
-          _buildCard(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '현재 스트릭',
-                  style: TextStyle(fontSize: 16),
-                ),
-                Row(
-                  children: List.generate(maxStreak, (index) {
-                    
-                    bool filled = index < currentStreak;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Icon(
-                        Icons.circle,
-                        size: 14,
-                        color: filled ? Colors.lightGreenAccent : Colors.grey[300],
-                      ),
-                    );
-                  }),
-                ),
-                Text(
-                  '$currentStreak / $maxStreak',
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
+          _buildCard(child: _buildStreakSection()),
+
           _buildSectionTitle('화면'),
           _buildCard(
             child: SwitchListTile(
@@ -138,23 +44,21 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
-          
-          // _buildCard(
-          //   child: ListTile(
-          //     title: const Text('테마 설정'),
-          //     trailing: DropdownButton<String>(
-          //       value: selectedTheme,
-          //       items: themes
-          //           .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-          //           .toList(),
-          //       onChanged: (val) {
-          //         setState(() => selectedTheme = val);
-          //       },
-          //     ),
-          //   ),
-          // ),
+          _buildCard(
+            child: ListTile(
+              title: const Text('테마 설정'),
+              trailing: DropdownButton<String>(
+                value: selectedTheme,
+                items: themes
+                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() => selectedTheme = val);
+                },
+              ),
+            ),
+          ),
 
-         
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
           _buildCard(
@@ -188,47 +92,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
-          _buildCard(                 // 타이머 집중시간 분 설정 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('집중 시간 (분)', style: TextStyle(fontSize: 16)),
-                SizedBox(
-                  height: 100,
-                  child: CupertinoPicker(
-                    itemExtent: 32,
-                    onSelectedItemChanged: (index) {
-                      int value = (index + 1) * 5;
-                      print('집중 시간: $value분');
-                      // 여기서 값 저장 가능
-                    },
-                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
-                  ),
-                ),
-              ],
+          _buildCard(
+            child: ListTile(
+              title: const Text('집중 시간(분)'),
+              subtitle: TextField(
+                controller: customTimeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(),
+              ),
             ),
           ),
-          _buildCard(               //휴식시간 분 설정 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('휴식 시간 (분)', style: TextStyle(fontSize: 16)),
-                SizedBox(
-                  height: 100,
-                  child: CupertinoPicker(
-                    itemExtent: 32,
-                    onSelectedItemChanged: (index) {
-                      int value = (index + 1) * 5;
-                      print('휴식 시간: $value분');
-                      // 여기서 값 저장 가능
-                    },
-                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
-                  ),
-                ),
-              ],
+          _buildCard(
+            child: ListTile(
+              title: const Text('휴식 시간(분)'),
+              subtitle: TextField(
+                controller: customTimeController2,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(),
+              ),
             ),
           ),
-
 
           const SizedBox(height: 24),
           _buildSectionTitle('기타'),
@@ -236,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: ListTile(
               title: const Text('오픈소스 라이선스'),
               subtitle: Text(
-                '• flutter\n• provider\n• shared_preferences',
+                '• flutter\n• provider\n• shared_preferences\n• streakify',
                 style: TextStyle(color: Colors.grey),
               ),
             ),
@@ -248,6 +131,28 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStreakSection() {
+    return Center(
+      child: StreakifyWidget(
+        numberOfDays: 365,
+        crossAxisCount: 7, //세로
+        margin: const EdgeInsets.all(1),
+        isDayTargetReachedMap: Map.fromEntries(
+          List.generate(
+            numberOfDays,
+            (index) => MapEntry(index, index % 2 == 0 || index % 3 == 0),
+          ),
+        ),
+        height: 100,
+        width: 1050,
+        onTap: (index) {
+          // 날짜 박스 클릭 시 로직
+          debugPrint('Day tapped: $index');
+        },
       ),
     );
   }
