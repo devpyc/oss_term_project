@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'main.dart'; // isDarkModeNotifier 때문에 추가
 import 'streak_manager.dart'; //  streak import
 import 'package:flutter/cupertino.dart'; //시간 설정 
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -73,13 +74,13 @@ class _TimePickerWidgetState extends State<TimePickerWidget> {
 
 
 class _SettingsPageState extends State<SettingsPage> {
-  String? selectedTheme = '기본 테마';
+   //String? selectedTheme = '기본 테마';
   String? selectedSound = '벨소리 1';
   String? selectedVibration = '보통';
   TextEditingController customTimeController = TextEditingController(text: '25');
   TextEditingController customTimeController2 = TextEditingController(text: '5');
 
-  final themes = ['기본 테마', '파란 테마', '녹색 테마'];
+  // final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
   final vibrations = ['없음', '약함', '보통', '강함'];
 
@@ -138,20 +139,20 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           
-          _buildCard(
-            child: ListTile(
-              title: const Text('테마 설정'),
-              trailing: DropdownButton<String>(
-                value: selectedTheme,
-                items: themes
-                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedTheme = val);
-                },
-              ),
-            ),
-          ),
+          // _buildCard(
+          //   child: ListTile(
+          //     title: const Text('테마 설정'),
+          //     trailing: DropdownButton<String>(
+          //       value: selectedTheme,
+          //       items: themes
+          //           .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
+          //           .toList(),
+          //       onChanged: (val) {
+          //         setState(() => selectedTheme = val);
+          //       },
+          //     ),
+          //   ),
+          // ),
 
          
           const SizedBox(height: 24),
@@ -187,7 +188,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
-          _buildCard(
+          _buildCard(                 // 타이머 집중시간 분 설정 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -207,7 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          _buildCard(
+          _buildCard(               //휴식시간 분 설정 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
