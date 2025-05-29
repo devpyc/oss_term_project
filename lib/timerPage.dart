@@ -116,7 +116,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
               initialValue: _currentTimerSeconds * _controller.value,
               onChange: (double value) {
                 setSliderValue(value);
-                Vibration.vibrate(duration: 30);
+                // Vibration.vibrate(duration: 30);
               },
               appearance: CircularSliderAppearance(
                 size: 250,

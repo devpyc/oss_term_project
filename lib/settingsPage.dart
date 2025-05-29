@@ -21,7 +21,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final vibrations = ['없음', '약함', '보통', '강함'];
 
   // streak 관련 변수 (예시로 임의 값 사용, 실제로는 streak_manager에서 관리 ㄱㄴ)
-  int currentStreak = 1;
+  int currentStreak = 7;
   int maxStreak = 30;
 
   @override
@@ -31,34 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionTitle('화면'),
-          _buildCard(
-            child: SwitchListTile(
-              title: const Text('다크모드'),
-              value: isDarkModeNotifier.value,
-              onChanged: (val) {
-                setState(() {
-                  isDarkModeNotifier.value = val;
-                });
-              },
-            ),
-          ),
-          _buildCard(
-            child: ListTile(
-              title: const Text('테마 설정'),
-              trailing: DropdownButton<String>(
-                value: selectedTheme,
-                items: themes
-                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedTheme = val);
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
+                    const SizedBox(height: 24),
           _buildSectionTitle('스트릭 (Streak)'),
           _buildCard(
             child: Row(
@@ -89,7 +62,35 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+          _buildSectionTitle('화면'),
+          _buildCard(
+            child: SwitchListTile(
+              title: const Text('다크모드'),
+              value: isDarkModeNotifier.value,
+              onChanged: (val) {
+                setState(() {
+                  isDarkModeNotifier.value = val;
+                });
+              },
+            ),
+          ),
+          
+          _buildCard(
+            child: ListTile(
+              title: const Text('테마 설정'),
+              trailing: DropdownButton<String>(
+                value: selectedTheme,
+                items: themes
+                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() => selectedTheme = val);
+                },
+              ),
+            ),
+          ),
 
+         
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
           _buildCard(
