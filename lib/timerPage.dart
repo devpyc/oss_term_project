@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 import 'package:vibration/vibration.dart';
 // import 'package:vibration/vibration_presets.dart';
+import 'package:avatar_glow/avatar_glow.dart';
 
 import 'configuration.dart';
+import 'notification.dart';
 
 class TimerPage extends StatefulWidget {
 
@@ -12,8 +15,8 @@ class TimerPage extends StatefulWidget {
 }
 
 class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixin {
-  static int workTimerSeconds = StaticVariableSet.timerTimework;
-  static int breakTimerSeconds = StaticVariableSet.timerTimebreak;
+  static int workTimerSeconds = StaticVariableSet.timerTimeWork;
+  static int breakTimerSeconds = StaticVariableSet.timerTimeBreak;
 
   late AnimationController _controller;
   int _currentTimerSeconds = workTimerSeconds;
@@ -22,13 +25,12 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
   bool get isRunning => _controller.isAnimating && _controller.value > 0;
 
   String get timerText {
-    int seconds = (_currentTimerSeconds * _controller.value).floor();
+    int seconds = (_currentTimerSeconds * _controller.value).round();
     if (seconds < 0) seconds = 0;
     final mm = (seconds ~/ 60).toString().padLeft(2, '0');
     final ss = (seconds % 60).toString().padLeft(2, '0');
     return '$mm:$ss';
   }
-
 
   @override
   void initState() {
@@ -41,25 +43,34 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
     _controller.addListener(() {
       setState(() {});
     });
-    _controller.addStatusListener((status) {
+    _controller.addStatusListener((status) async {
       if (status == AnimationStatus.dismissed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('타이머 종료')
-          )
-        );
+        // 첫 번째, 두 번째 타이머 종료
+        Vibration.vibrate(duration: 1000);
         if (_currentTimerIndex == 1) {
-          // 첫 번째 타이머가 끝나면 두 번째 타이머로 전환
-          // 첫 번째 타이머 종료
-          setState(() {
-            _currentTimerIndex = 2;
-            _currentTimerSeconds = breakTimerSeconds;
-            _controller.duration = Duration(seconds: breakTimerSeconds);
-            _controller.value = 1.0;
-          });
-          _controller.reverse(from: 1.0); // 두 번째 타이머 자동 시작
+          // 첫 번째 타이머 종료: 팝업창 출력, 확인 클릭하면 두 번째 타이머 시작
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => CountdownDialog(
+              onConfirm: () {
+                setState(() {
+                  _currentTimerIndex = 2;
+                  _currentTimerSeconds = breakTimerSeconds;
+                  _controller.duration = Duration(seconds: breakTimerSeconds);
+                  _controller.value = 1.0;
+                  StaticVariableSet.myTimerColor = StaticVariableSet.myColorGreen;
+                });
+                _controller.reverse(from: 1.0); // 두 번째 타이머 시작
+              },
+              onTimeout: () {
+                reset(); // 10초 내에 확인을 누르지 않으면 reset
+              },
+            ),
+          );
         } else if (_currentTimerIndex == 2) {
           // 두 번째 타이머 종료
+          FlutterLocalNotification.showNotification();
           reset();
         }
       }
@@ -86,6 +97,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
       _currentTimerSeconds = workTimerSeconds;
       _controller.duration = Duration(seconds: workTimerSeconds);
       _controller.value = 1.0;
+      StaticVariableSet.myTimerColor = StaticVariableSet.myColorBlue;
     });
   }
 
@@ -108,6 +120,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // 타이머
             SleekCircularSlider(
               min: 0,
               max: _currentTimerSeconds.toDouble(),
@@ -121,30 +134,47 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                 startAngle: 270,
                 angleRange: 360,
                 customColors: CustomSliderColors(
-                  progressBarColor: Colors.blue,
+                  progressBarColor: StaticVariableSet.myTimerColor,
                   trackColor: Colors.grey[300]!,
-                  dotColor: Colors.blueAccent,
-                ),
-                infoProperties: InfoProperties(
-                  mainLabelStyle: TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
-                  modifier: (double value) {
-                    int seconds = value.ceil();
-                    String mm = (seconds ~/ 60).toString().padLeft(2, '0');
-                    String ss = (seconds % 60).toString().padLeft(2, '0');
-                    return '$mm:$ss';
-                  },
+                  dotColor: Colors.redAccent,
                 ),
               ),
               innerWidget: (double value) {
-                int seconds = value.ceil();
+                int seconds = (_currentTimerSeconds * _controller.value).round();
+                if (seconds < 0) seconds = 0;
                 String mm = (seconds ~/ 60).toString().padLeft(2, '0');
                 String ss = (seconds % 60).toString().padLeft(2, '0');
-                return Center(
-                  child: Text('$mm:$ss', style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AvatarGlow(
+                      // startDelay: const Duration(milliseconds: 2000),
+                      duration: Duration(milliseconds: 1500),
+                      repeat: true,
+                      glowColor: StaticVariableSet.myTimerColor,
+                      glowShape: BoxShape.circle,
+                      animate: isRunning,
+                      curve: Curves.fastOutSlowIn,
+                      glowRadiusFactor: 0.3,
+                      glowCount: 3,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: Text(""),
+                        radius: 100.0,
+                      )
+                    ),
+                    Center(
+                      child: Text(
+                        '$mm:$ss',
+                        style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
             SizedBox(height: 50),
+            // 버튼 초기화, 재생 및 일시정지, 중지
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -173,13 +203,13 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                   ),
                 ),
                 ElevatedButton(
-                    onPressed: pause,
-                    child: Icon(Icons.stop),
-                    style: ElevatedButton.styleFrom(
-                      shape: CircleBorder(),
-                      padding: EdgeInsets.all(20),
-                    ),
+                  onPressed: pause,
+                  child: Icon(Icons.stop),
+                  style: ElevatedButton.styleFrom(
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(20),
                   ),
+                ),
               ],
             ),
           ],
@@ -188,3 +218,75 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
     );
   }
 }
+
+// 팝업창 출력
+class CountdownDialog extends StatefulWidget {
+  final VoidCallback onConfirm;
+  final VoidCallback onTimeout; // 추가
+
+  const CountdownDialog({
+    Key? key,
+    required this.onConfirm,
+    required this.onTimeout,
+  }) : super(key: key);
+
+  @override
+  State<CountdownDialog> createState() => _CountdownDialogState();
+}
+
+class _CountdownDialogState extends State<CountdownDialog> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  bool _confirmed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 10),
+    );
+    if (_controller.value == 0.0) {
+      _controller.forward();
+    }
+    _controller.addListener(() {
+      setState(() {});
+    });
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && !_confirmed) {
+        Navigator.of(context, rootNavigator: true).pop();
+        widget.onTimeout(); // 10초 경과시 콜백 실행
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  int get secondsLeft {
+    int left = 10 - (_controller.value * 10).floor();
+    return left > 0 ? left : 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('알림'),
+      content: Text('10초 내에 확인을 누르세요!\n남은 시간: $secondsLeft초'),
+      actions: [
+        TextButton(
+          onPressed: () {
+            _confirmed = true;
+            Navigator.of(context, rootNavigator: true).pop();
+            widget.onConfirm();
+          },
+          child: Text('확인'),
+        ),
+      ],
+    );
+  }
+}
+
+

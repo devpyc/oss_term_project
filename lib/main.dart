@@ -1,12 +1,49 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'configuration.dart';
+import 'package:flutter/services.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+// import 'configuration.dart';
+import 'notification.dart';
+
 import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
 import 'alarmPage.dart';
-import 'package:flutter/services.dart'; //다크모드
+
 final ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false); //다크모드
+
+StreamController<String> streamController = StreamController.broadcast();
+
+// @pragma('vm:entry-point')
+// void notificationTapBackground(NotificationResponse response) {
+//   // 백그라운드에서 알림 클릭 시 동작
+// }
+
+// final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+//     FlutterLocalNotificationsPlugin();
+
+// Future<void> initializeNotifications() async {
+//   const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
+
+//   const InitializationSettings initializationSettings = InitializationSettings(
+//     iOS: initializationSettingsIOS,
+//   );
+
+//   await flutterLocalNotificationsPlugin.initialize(
+//     initializationSettings,
+//     onDidReceiveNotificationResponse: (NotificationResponse response) {
+//       // 알림 클릭 시 동작 정의
+//     },
+//     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+//   );
+
+//   // 권한 요청 (iOS) 알림, 뱃지, 사운드
+//   await flutterLocalNotificationsPlugin
+//       .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+//       ?.requestPermissions(alert: true, badge: true, sound: true);
+// }
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +51,8 @@ void main() {
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp
   ]);
+
+  FlutterLocalNotification.onBackgroundNotificationResponse();
 
   runApp(const MyApp());
 }
@@ -64,23 +103,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   var _index = 1;
 
-  int timercho = 0;
-  late Timer _timer;
-
-  void startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (timercho == 0) {
-        setState(() {
-          timer.cancel();
-        });
-      } else {
-        setState(() {
-          timercho--;
-        });
-      }
-    });
-  }
-
   List<Widget> _pages = [
     CalendarPage(),
     TimerPage(),
@@ -89,14 +111,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
+    FlutterLocalNotification.init();
+    Future.delayed(
+      const Duration(seconds: 3),
+      FlutterLocalNotification.requestNotificationPermission()
+    );
     super.initState();
-    startTimer();
   }
 
   @override
   void dispose() {
+    streamController.close();
     super.dispose();
-    _timer.cancel();
   }
 
   @override
@@ -125,8 +151,8 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: _pages[_index],
       // floatingActionButton: FloatingActionButton(
-      //   onPressed: _incrementCounter,
-      //   tooltip: 'Increment',
+      //   onPressed: FlutterLocalNotification.showNotification,
+      //   tooltip: '알람test',
       //   child: const Icon(Icons.add),
       // ),
       bottomNavigationBar: BottomNavigationBar(
@@ -136,7 +162,6 @@ class _MyHomePageState extends State<MyHomePage> {
         onTap: (value) {
           setState(() {
             _index = value;
-            // print(_index);
           });
         },
         items: [
