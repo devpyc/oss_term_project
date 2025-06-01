@@ -10,6 +10,8 @@ import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
 import 'alarmPage.dart';
+import 'package:alarm/alarm.dart';
+import 'configuration.dart';
 
 final ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false); //다크모드
 
@@ -45,9 +47,10 @@ StreamController<String> streamController = StreamController.broadcast();
 // }
 
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await Alarm.init();
+  await StaticVariableSet.loadAllSettings();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp
   ]);
@@ -149,7 +152,10 @@ class _MyHomePageState extends State<MyHomePage> {
         width: MediaQuery.of(context).size.width,
         child: const AlarmPage()
       ),
-      body: _pages[_index],
+      body: IndexedStack(
+        index: _index,
+        children: _pages,
+      ),
       // floatingActionButton: FloatingActionButton(
       //   onPressed: FlutterLocalNotification.showNotification,
       //   tooltip: '알람test',

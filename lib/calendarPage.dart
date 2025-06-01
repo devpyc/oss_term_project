@@ -3,6 +3,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'configuration.dart'; // 전역 변수 import
+import 'notification.dart'; // 수정된 notification import
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({Key? key}) : super(key: key);
@@ -16,28 +18,50 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-  final Map<DateTime, List<Event>> _events = {};
-
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
-    _loadEvents(); // 일정 불러오기
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _initializeNotifications();
+    await _loadEvents();
+    await _loadNotificationCounter();
+    await _rescheduleNotifications(); // 앱 재시작 시 알림 재예약
+  }
+
+  Future<void> _initializeNotifications() async {
+    await CalendarNotification.initCalendar();
+  }
+
+  // 알림 카운터 로드
+  Future<void> _loadNotificationCounter() async {
+    final prefs = await SharedPreferences.getInstance();
+    StaticVariableSet.notificationIdCounter = prefs.getInt(StaticVariableSet.NOTIFICATION_COUNTER_KEY) ?? 1;
+  }
+
+  // 알림 카운터 저장
+  Future<void> _saveNotificationCounter() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(StaticVariableSet.NOTIFICATION_COUNTER_KEY, StaticVariableSet.notificationIdCounter);
   }
 
   Future<void> _loadEvents() async {
     final prefs = await SharedPreferences.getInstance();
-    final eventsJson = prefs.getString('calendar_events');
+    final eventsJson = prefs.getString(StaticVariableSet.EVENTS_KEY);
 
     if (eventsJson != null) {
       final Map<String, dynamic> eventsMap = json.decode(eventsJson);
 
       eventsMap.forEach((dateString, eventsList) {
         final date = DateTime.parse(dateString);
+        final normalizedDate = DateTime(date.year, date.month, date.day);
         final events = (eventsList as List)
             .map((eventJson) => Event.fromJson(eventJson))
             .toList();
-        _events[date] = events;
+        StaticVariableSet.events[normalizedDate] = events;
       });
 
       setState(() {});
@@ -49,18 +73,32 @@ class _CalendarPageState extends State<CalendarPage> {
     final prefs = await SharedPreferences.getInstance();
 
     final Map<String, dynamic> eventsMap = {};
-    _events.forEach((date, events) {
+    StaticVariableSet.events.forEach((date, events) {
       eventsMap[date.toIso8601String()] =
           events.map((event) => event.toJson()).toList();
     });
 
-    await prefs.setString('calendar_events', json.encode(eventsMap));
+    await prefs.setString(StaticVariableSet.EVENTS_KEY, json.encode(eventsMap));
+  }
+
+  // 앱 재시작 시 알림 재예약
+  Future<void> _rescheduleNotifications() async {
+    for (final entry in StaticVariableSet.events.entries) {
+      final date = entry.key;
+      final events = entry.value;
+
+      for (final event in events) {
+        if (!event.isCompleted && event.notificationId != null) {
+          await CalendarNotification.scheduleEventWithDate(event, date);
+        }
+      }
+    }
   }
 
   // 선택한 날짜 일정 불러오기
   List<Event> _getEventsForDay(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
-    return _events[normalizedDay] ?? [];
+    return StaticVariableSet.events[normalizedDay] ?? [];
   }
 
   @override
@@ -68,6 +106,79 @@ class _CalendarPageState extends State<CalendarPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('캘린더'),
+        actions: [
+          // 테스트 알림 버튼
+          IconButton(
+            icon: const Icon(Icons.notification_important),
+            onPressed: () async {
+              await CalendarNotification.scheduleEventNotification(
+                id: 999,
+                title: 'Test',
+                body: '테스트 알림입니다',
+                scheduledTime: DateTime.now().add(const Duration(seconds: 10)),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('10초 후 테스트 알림 표시')),
+              );
+            },
+          ),
+          // 예약된 알림 확인 버튼
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: () async {
+              await CalendarNotification.checkPendingNotifications();
+            },
+          ),
+          // 데이터 초기화 메뉴
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'clear') {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('초기화'),
+                    content: const Text('모든 일정 데이터를 삭제하시겠습니까?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('취소'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('삭제'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
+                  await CalendarNotification.cancelAllNotifications();
+                  setState(() {
+                    StaticVariableSet.events.clear();
+                    StaticVariableSet.notificationIdCounter = 1;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('모든 데이터가 삭제되었습니다.')),
+                  );
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever),
+                    SizedBox(width: 8),
+                    Text('데이터 초기화'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -125,24 +236,56 @@ class _CalendarPageState extends State<CalendarPage> {
           child: ListTile(
             leading: Checkbox(
               value: event.isCompleted,
-              onChanged: _selectedDay!.isBefore(DateTime.now())
-                  ? (value) async {
+              onChanged: (value) async {
                 setState(() {
                   event.isCompleted = value!;
                 });
-                await _saveEvents(); // 변경사항 저장
-              }
-                  : null,
+
+                // 완료된 일정의 알림을 취소
+                if (event.isCompleted && event.notificationId != null) {
+                  await CalendarNotification.cancelNotification(event.notificationId!);
+                } else if (!event.isCompleted && event.notificationId != null) {
+                  // 완료 취소 시 알림 재예약
+                  await CalendarNotification.scheduleEventWithDate(event, _selectedDay!);
+                }
+
+                await _saveEvents();
+              },
             ),
-            title: Text(event.title),
-            subtitle: Text('${event.startTime} - ${event.endTime}'),
+            title: Text(
+              event.title,
+              style: TextStyle(
+                decoration: event.isCompleted
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+                color: event.isCompleted
+                    ? Colors.grey
+                    : null,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${event.startTime} - ${event.endTime}'),
+                if (event.notificationId != null)
+                  Text(
+                    '알림 ID: ${event.notificationId}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+              ],
+            ),
             trailing: IconButton(
               icon: const Icon(Icons.delete),
               onPressed: () async {
+                // 알림 취소
+                if (event.notificationId != null) {
+                  await CalendarNotification.cancelNotification(event.notificationId!);
+                }
+
                 setState(() {
                   _getEventsForDay(_selectedDay!).remove(event);
                 });
-                await _saveEvents(); // 변경사항 저장
+                await _saveEvents();
               },
             ),
           ),
@@ -154,8 +297,8 @@ class _CalendarPageState extends State<CalendarPage> {
   void _showAddEventDialog(DateTime day) {
     final titleController = TextEditingController();
 
-    String startTime = '09:00';
-    String endTime = '10:00';
+    String startTime = StaticVariableSet.defaultStartTime;
+    String endTime = StaticVariableSet.defaultEndTime;
 
     showDialog(
       context: context,
@@ -214,22 +357,34 @@ class _CalendarPageState extends State<CalendarPage> {
                     if (titleController.text.isNotEmpty) {
                       final normalizedDay = DateTime(day.year, day.month, day.day);
 
-                      if (_events[normalizedDay] == null) {
-                        _events[normalizedDay] = [];
+                      if (StaticVariableSet.events[normalizedDay] == null) {
+                        StaticVariableSet.events[normalizedDay] = [];
                       }
 
+                      final newEvent = Event(
+                        title: titleController.text,
+                        startTime: startTime,
+                        endTime: endTime,
+                        notificationId: StaticVariableSet.notificationIdCounter++,
+                      );
+
                       setState(() {
-                        _events[normalizedDay]!.add(
-                          Event(
-                            title: titleController.text,
-                            startTime: startTime,
-                            endTime: endTime,
-                          ),
-                        );
+                        StaticVariableSet.events[normalizedDay]!.add(newEvent);
                       });
 
+                      // 알림 예약
+                      await CalendarNotification.scheduleEventWithDate(newEvent, normalizedDay);
+
                       await _saveEvents();
+                      await _saveNotificationCounter();
                       Navigator.pop(context);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('일정이 추가되고 알림이 예약되었습니다.'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
                     }
                   },
                   child: const Text('추가'),
@@ -381,39 +536,6 @@ class _CalendarPageState extends State<CalendarPage> {
           },
         );
       },
-    );
-  }
-}
-
-class Event {
-  final String title;
-  final String startTime;
-  final String endTime;
-  bool isCompleted;
-
-  Event({
-    required this.title,
-    required this.startTime,
-    required this.endTime,
-    this.isCompleted = false,
-  });
-
-  // to json
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'startTime': startTime,
-      'endTime': endTime,
-      'isCompleted': isCompleted,
-    };
-  }
-
-  factory Event.fromJson(Map<String, dynamic> json) {
-    return Event(
-      title: json['title'],
-      startTime: json['startTime'],
-      endTime: json['endTime'],
-      isCompleted: json['isCompleted'] ?? false,
     );
   }
 }
