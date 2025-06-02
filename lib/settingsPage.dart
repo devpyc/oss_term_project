@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'main.dart'; // isDarkModeNotifier 때문에 추가
 import 'package:streakify/streakify.dart'; // streakify 추가
+import 'package:alarm/alarm.dart';
+import 'main.dart';
+import 'configuration.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,14 +14,61 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String? selectedTheme = '기본 테마';
-  String? selectedSound = '벨소리 1';
-  String? selectedVibration = '보통';
-  TextEditingController customTimeController = TextEditingController(text: '25');
-  TextEditingController customTimeController2 = TextEditingController(text: '5');
+  String? selectedSound;
+  TextEditingController customTimeController = TextEditingController();
+  TextEditingController customTimeController2 = TextEditingController();
 
   final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
-  final vibrations = ['없음', '약함', '보통', '강함'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  _loadSettings() {
+    setState(() {
+      selectedSound = StaticVariableSet.selectedAlarmSound;
+      customTimeController.text = (StaticVariableSet.timerTimeWork ~/ 60).toString();
+      customTimeController2.text = (StaticVariableSet.timerTimeBreak ~/ 60).toString();
+    });
+  }
+
+  _previewAlarmSound(String soundName) async {
+    if (soundName == '끄기') return;
+
+    try {
+      await Alarm.stop(999);
+
+      final alarmSettings = AlarmSettings(
+        id: 999,
+        dateTime: DateTime.now(),
+        assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
+        loopAudio: false,
+        vibrate: false,
+        warningNotificationOnKill: false,
+        androidFullScreenIntent: false,
+        volumeSettings: VolumeSettings.fade(
+          volume: 0.5,
+          fadeDuration: Duration(seconds: 1),
+        ),
+        notificationSettings: NotificationSettings(
+          title: '미리보기',
+          body: soundName,
+        ),
+      );
+
+      await Alarm.set(alarmSettings: alarmSettings);
+
+      Future.delayed(Duration(seconds: 3), () {
+        Alarm.stop(999);
+      });
+
+    } catch (e) {
+      print('미리보기 오류: $e');
+    }
+  }
 
   final int numberOfDays = 30;
 
@@ -62,30 +112,58 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
           _buildCard(
-            child: ListTile(
-              title: const Text('알람 소리'),
-              trailing: DropdownButton<String>(
-                value: selectedSound,
-                items: sounds
-                    .map((sound) => DropdownMenuItem(value: sound, child: Text(sound)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedSound = val);
-                },
-              ),
-            ),
-          ),
-          _buildCard(
-            child: ListTile(
-              title: const Text('진동 정도'),
-              trailing: DropdownButton<String>(
-                value: selectedVibration,
-                items: vibrations
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedVibration = val);
-                },
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '알람 소리',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: DropdownButton<String>(
+                          value: selectedSound,
+                          isExpanded: true,
+                          items: sounds
+                              .map((sound) => DropdownMenuItem(value: sound, child: Text(sound)))
+                              .toList(),
+                          onChanged: (val) async {
+                            if (val != null) {
+                              setState(() => selectedSound = val);
+                              await StaticVariableSet.saveAlarmSound(val);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      if (selectedSound != null && selectedSound != '끄기')
+                        ElevatedButton.icon(
+                          onPressed: () => _previewAlarmSound(selectedSound!),
+                          icon: Icon(Icons.play_arrow, size: 18),
+                          label: Text('미리듣기'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (selectedSound == '끄기')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '알람 소리가 꺼져 있습니다',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -99,6 +177,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 controller: customTimeController,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(),
+                onChanged: (value) {
+                  final minutes = int.tryParse(value);
+                  if (minutes != null && minutes > 0) {
+                    StaticVariableSet.saveTimerTimes(minutes * 60, StaticVariableSet.timerTimeBreak);
+                  }
+                },
               ),
             ),
           ),
@@ -109,6 +193,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 controller: customTimeController2,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(),
+                onChanged: (value) {
+                  final minutes = int.tryParse(value);
+                  if (minutes != null && minutes > 0) {
+                    StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWork, minutes * 60);
+                  }
+                },
               ),
             ),
           ),
