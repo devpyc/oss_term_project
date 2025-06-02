@@ -34,8 +34,6 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
-		<string>background-processing</string>
-		<string>processing</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -63,5 +61,9 @@
 		<key>UIUserNotificationTypesSound</key>
 		<true/>
 	</dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+    <array>
+        <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    </array>
 </dict>
 </plist>
