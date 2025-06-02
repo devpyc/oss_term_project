@@ -10,6 +10,8 @@ import 'configuration.dart';
 import 'notification.dart';
 
 class TimerPage extends StatefulWidget {
+  const TimerPage({super.key});
+  
   @override
   State<TimerPage> createState() => _TimerPageState();
 }
@@ -177,6 +179,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
               initialValue: _currentTimerSeconds * _controller.value,
               onChange: (double value) {
                 setSliderValue(value);
+                // Vibration.vibrate(duration: 30);
               },
               appearance: CircularSliderAppearance(
                 size: 250,
@@ -228,11 +231,11 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
               children: [
                 ElevatedButton(
                   onPressed: reset,
-                  child: Icon(Icons.replay),
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                   ),
+                  child: Icon(Icons.replay),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -243,13 +246,19 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                     }
                     setState(() {});
                   },
-                  child: Icon(isRunning ? Icons.pause : Icons.play_arrow),
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                   ),
+                  child: Icon(isRunning ? Icons.pause : Icons.play_arrow),
                 ),
                 ElevatedButton(
+                    onPressed: pause,
+                    style: ElevatedButton.styleFrom(
+                      shape: CircleBorder(),
+                      padding: EdgeInsets.all(20),
+                    ),
+                    child: Icon(Icons.stop),
                   onPressed: pause,
                   child: Icon(Icons.stop),
                   style: ElevatedButton.styleFrom(

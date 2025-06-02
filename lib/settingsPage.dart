@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'main.dart'; // isDarkModeNotifier 때문에 추가
+import 'package:streakify/streakify.dart'; // streakify 추가
 import 'package:alarm/alarm.dart';
 import 'main.dart';
 import 'configuration.dart';
@@ -68,16 +70,18 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  final int numberOfDays = 30;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('설정'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const SizedBox(height: 24),
+          _buildSectionTitle('스트릭 (Streak)'),
+          _buildCard(child: _buildStreakSection()),
+
           _buildSectionTitle('화면'),
           _buildCard(
             child: SwitchListTile(
@@ -205,7 +209,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: ListTile(
               title: const Text('오픈소스 라이선스'),
               subtitle: Text(
-                '• flutter\n• provider\n• shared_preferences\n• alarm',
+                '• flutter\n• provider\n• shared_preferences\n• streakify',
                 style: TextStyle(color: Colors.grey),
               ),
             ),
@@ -217,6 +221,28 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStreakSection() {
+    return Center(
+      child: StreakifyWidget(
+        numberOfDays: 365,
+        crossAxisCount: 7, //세로
+        margin: const EdgeInsets.all(1),
+        isDayTargetReachedMap: Map.fromEntries(
+          List.generate(
+            numberOfDays,
+            (index) => MapEntry(index, index % 2 == 0 || index % 3 == 0),
+          ),
+        ),
+        height: 100,
+        width: 1050,
+        onTap: (index) {
+          // 날짜 박스 클릭 시 로직
+          debugPrint('Day tapped: $index');
+        },
       ),
     );
   }

@@ -61,7 +61,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +106,24 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   var _index = 1;
 
+  int timercho = 0;
+  late Timer _timer;
+
+  void startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (timercho == 0) {
+        setState(() {
+          timer.cancel();
+        });
+      } else {
+        setState(() {
+          timercho--;
+        });
+      }
+    });
+  }
+
+  final List<Widget> _pages = [
   List<Widget> _pages = [
     CalendarPage(),
     TimerPage(),
