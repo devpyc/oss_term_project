@@ -253,15 +253,9 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                   child: Icon(isRunning ? Icons.pause : Icons.play_arrow),
                 ),
                 ElevatedButton(
-                    onPressed: pause,
-                    style: ElevatedButton.styleFrom(
-                      shape: CircleBorder(),
-                      padding: EdgeInsets.all(20),
-                    ),
-                    child: Icon(Icons.stop),
                   onPressed: pause,
-                  child: Icon(Icons.stop),
-                  style: ElevatedButton.styleFrom(
+                    child: Icon(Icons.stop),
+                    style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(20),
                   ),

@@ -124,7 +124,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   final List<Widget> _pages = [
-  List<Widget> _pages = [
     CalendarPage(),
     TimerPage(),
     SettingsPage()
