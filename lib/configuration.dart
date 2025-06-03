@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class StaticVariableSet {
+class StaticVariableSet extends ChangeNotifier {
+  /// 집중 시간 인덱스
+  static int timerTimeWorkIndex = 4;
+  /// 휴식 시간 인덱스
+  static int timerTimeBreakIndex = 0;
   /// 집중 시간 (seconds)
-  static int timerTimeWork = 1500;
+  static int timerTimeWork = (timerTimeWorkIndex + 1) * 5 * 60;
   /// 휴식 시간 (seconds)
-  static int timerTimeBreak = 300;
+  static int timerTimeBreak = (timerTimeBreakIndex + 1) * 5 * 60;
   /// 진동 세기 (ms)
   static int vibrateStrength = 1000;
   /// 집중 시간 타이머 색
@@ -14,6 +18,29 @@ class StaticVariableSet {
   static const Color myColorGreen = Colors.green;
   /// 타이머 색
   static Color myTimerColor = myColorBlue;
+
+  /// 모든 설정 불러오기 (앱 시작시 호출)
+  static Future<void> loadAllSettings() async {
+    await loadAlarmSound();
+    await loadVibration();
+    await loadTimerTimes();
+  }
+
+  /// 타이머 시간 불러오기
+  static Future<void> loadTimerTimes() async {
+    final prefs = await SharedPreferences.getInstance();
+    timerTimeWorkIndex = prefs.getInt(TIMER_WORK_TIME_KEY) ?? 4; // 25분
+    timerTimeBreakIndex = prefs.getInt(TIMER_BREAK_TIME_KEY) ?? 0; // 5분
+    timerTimeWork = (timerTimeWorkIndex + 1) * 5 * 60;
+    timerTimeBreak = (timerTimeBreakIndex + 1) * 5 * 60;
+  }
+
+  /// 타이머 시간 저장
+  static Future<void> saveTimerTimes(int workTimeIndex, int breakTimeIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(TIMER_WORK_TIME_KEY, workTimeIndex);
+    await prefs.setInt(TIMER_BREAK_TIME_KEY, breakTimeIndex);
+  }
 
   // ===== 알람 관련 설정 =====
 
@@ -89,29 +116,6 @@ class StaticVariableSet {
     final prefs = await SharedPreferences.getInstance();
     selectedVibration = prefs.getString(ALARM_VIBRATION_KEY) ?? '보통';
     vibrateStrength = getVibrationDuration(selectedVibration);
-  }
-
-  /// 타이머 시간 저장
-  static Future<void> saveTimerTimes(int workTime, int breakTime) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(TIMER_WORK_TIME_KEY, workTime);
-    await prefs.setInt(TIMER_BREAK_TIME_KEY, breakTime);
-    timerTimeWork = workTime;
-    timerTimeBreak = breakTime;
-  }
-
-  /// 타이머 시간 불러오기
-  static Future<void> loadTimerTimes() async {
-    final prefs = await SharedPreferences.getInstance();
-    timerTimeWork = prefs.getInt(TIMER_WORK_TIME_KEY) ?? 1500; // 25분
-    timerTimeBreak = prefs.getInt(TIMER_BREAK_TIME_KEY) ?? 300; // 5분
-  }
-
-  /// 모든 설정 불러오기 (앱 시작시 호출)
-  static Future<void> loadAllSettings() async {
-    await loadAlarmSound();
-    await loadVibration();
-    await loadTimerTimes();
   }
 
   /// 알람 소리에 따른 파일 경로 반환

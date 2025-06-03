@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'main.dart'; // isDarkModeNotifier 때문에 추가
-import 'package:streakify/streakify.dart'; // streakify 추가
+import 'package:streakify/streakify.dart';
 import 'package:alarm/alarm.dart';
-import 'main.dart';
+import 'package:flutter/cupertino.dart';
+
 import 'configuration.dart';
 
+import 'main.dart';
+
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final ValueChanged<int> onTimeChanged;
+  const SettingsPage({required this.onTimeChanged, Key? key}) : super(key: key);
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -21,10 +24,22 @@ class _SettingsPageState extends State<SettingsPage> {
   final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
 
+  late FixedExtentScrollController _workController;
+  late FixedExtentScrollController _breakController;
+
   @override
   void initState() {
     super.initState();
+    _workController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeWorkIndex);
+    _breakController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeBreakIndex);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _workController.dispose();
+    _breakController.dispose();
+    super.dispose();
   }
 
   _loadSettings() {
@@ -78,9 +93,8 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const SizedBox(height: 24),
-          _buildSectionTitle('스트릭 (Streak)'),
-          _buildCard(child: _buildStreakSection()),
+          // _buildSectionTitle('스트릭 (Streak)'),
+          // _buildCard(child: _buildStreakSection()),
 
           _buildSectionTitle('화면'),
           _buildCard(
@@ -94,20 +108,20 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
-          _buildCard(
-            child: ListTile(
-              title: const Text('테마 설정'),
-              trailing: DropdownButton<String>(
-                value: selectedTheme,
-                items: themes
-                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedTheme = val);
-                },
-              ),
-            ),
-          ),
+          // _buildCard(
+          //   child: ListTile(
+          //     title: const Text('테마 설정'),
+          //     trailing: DropdownButton<String>(
+          //       value: selectedTheme,
+          //       items: themes
+          //           .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
+          //           .toList(),
+          //       onChanged: (val) {
+          //         setState(() => selectedTheme = val);
+          //       },
+          //     ),
+          //   ),
+          // ),
 
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
@@ -171,35 +185,50 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
           _buildCard(
-            child: ListTile(
-              title: const Text('집중 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(),
-                onChanged: (value) {
-                  final minutes = int.tryParse(value);
-                  if (minutes != null && minutes > 0) {
-                    StaticVariableSet.saveTimerTimes(minutes * 60, StaticVariableSet.timerTimeBreak);
-                  }
-                },
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('집중 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    scrollController: _workController,
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) async {
+                      setState(() {
+                        StaticVariableSet.timerTimeWorkIndex = index;
+                        StaticVariableSet.timerTimeWork = (index + 1) * 5 * 60;
+                      });
+                      widget.onTimeChanged((index + 1) * 5 * 60);
+                      await StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWorkIndex, StaticVariableSet.timerTimeBreakIndex);
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
+                ),
+              ],
             ),
           ),
           _buildCard(
-            child: ListTile(
-              title: const Text('휴식 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController2,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(),
-                onChanged: (value) {
-                  final minutes = int.tryParse(value);
-                  if (minutes != null && minutes > 0) {
-                    StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWork, minutes * 60);
-                  }
-                },
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('휴식 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    scrollController: _breakController,
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) {
+                      setState(() {
+                        StaticVariableSet.timerTimeBreakIndex = index;
+                        StaticVariableSet.timerTimeBreak = (index + 1) * 5 * 60;
+                      });
+                      StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWorkIndex, StaticVariableSet.timerTimeBreakIndex);
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
+                ),
+              ],
             ),
           ),
 

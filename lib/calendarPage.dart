@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
 import 'configuration.dart'; // 전역 변수 import
 import 'notification.dart'; // 수정된 notification import
 
@@ -108,27 +109,27 @@ class _CalendarPageState extends State<CalendarPage> {
         title: const Text('캘린더'),
         actions: [
           // 테스트 알림 버튼
-          IconButton(
-            icon: const Icon(Icons.notification_important),
-            onPressed: () async {
-              await CalendarNotification.scheduleEventNotification(
-                id: 999,
-                title: 'Test',
-                body: '테스트 알림입니다',
-                scheduledTime: DateTime.now().add(const Duration(seconds: 10)),
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('10초 후 테스트 알림 표시')),
-              );
-            },
-          ),
-          // 예약된 알림 확인 버튼
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () async {
-              await CalendarNotification.checkPendingNotifications();
-            },
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.notification_important),
+          //   onPressed: () async {
+          //     await CalendarNotification.scheduleEventNotification(
+          //       id: 999,
+          //       title: 'Test',
+          //       body: '테스트 알림입니다',
+          //       scheduledTime: DateTime.now().add(const Duration(seconds: 10)),
+          //     );
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       const SnackBar(content: Text('10초 후 테스트 알림 표시')),
+          //     );
+          //   },
+          // ),
+          // // 예약된 알림 확인 버튼
+          // IconButton(
+          //   icon: const Icon(Icons.list),
+          //   onPressed: () async {
+          //     await CalendarNotification.checkPendingNotifications();
+          //   },
+          // ),
           // 데이터 초기화 메뉴
           PopupMenuButton<String>(
             onSelected: (value) async {

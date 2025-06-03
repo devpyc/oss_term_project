@@ -1,67 +1,37 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:alarm/alarm.dart';
 
-// import 'configuration.dart';
+import 'configuration.dart';
 import 'notification.dart';
 
 import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
-import 'alarmPage.dart';
-import 'package:alarm/alarm.dart';
-import 'configuration.dart';
+// import 'alarmPage.dart';
 
 final ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false); //다크모드
 
 StreamController<String> streamController = StreamController.broadcast();
 
-// @pragma('vm:entry-point')
-// void notificationTapBackground(NotificationResponse response) {
-//   // 백그라운드에서 알림 클릭 시 동작
-// }
-
-// final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-//     FlutterLocalNotificationsPlugin();
-
-// Future<void> initializeNotifications() async {
-//   const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
-
-//   const InitializationSettings initializationSettings = InitializationSettings(
-//     iOS: initializationSettingsIOS,
-//   );
-
-//   await flutterLocalNotificationsPlugin.initialize(
-//     initializationSettings,
-//     onDidReceiveNotificationResponse: (NotificationResponse response) {
-//       // 알림 클릭 시 동작 정의
-//     },
-//     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-//   );
-
-//   // 권한 요청 (iOS) 알림, 뱃지, 사운드
-//   await flutterLocalNotificationsPlugin
-//       .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-//       ?.requestPermissions(alert: true, badge: true, sound: true);
-// }
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Alarm.init();
-  await StaticVariableSet.loadAllSettings();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp
   ]);
 
-  FlutterLocalNotification.onBackgroundNotificationResponse();
+  await Alarm.init();
+  await StaticVariableSet.loadAllSettings();
 
-  runApp(const MyApp());
+  FlutterLocalNotification.onBackgroundNotificationResponse();
+  
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -104,30 +74,19 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<TimerPageState> _timerPageKey = GlobalKey<TimerPageState>();
+  
   var _index = 1;
 
-  int timercho = 0;
-  late Timer _timer;
-
-  void startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (timercho == 0) {
-        setState(() {
-          timer.cancel();
-        });
-      } else {
-        setState(() {
-          timercho--;
-        });
-      }
-    });
+  void _handleReset() {
+    _timerPageKey.currentState?.reset();
   }
 
-  final List<Widget> _pages = [
-    CalendarPage(),
-    TimerPage(),
-    SettingsPage()
-  ];
+  void onTimeChanged(int value) {
+    setState(() {
+      StaticVariableSet.timerTimeWork = value;
+    });
+  }
 
   @override
   void initState() {
@@ -156,28 +115,29 @@ class _MyHomePageState extends State<MyHomePage> {
         iconTheme: const IconThemeData(
           color: Colors.white,
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(Icons.notifications),
+        //     onPressed: () {
+        //       _scaffoldKey.currentState?.openEndDrawer();
+        //     },
+        //   ),
+        // ],
       ),
-      endDrawer: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: const AlarmPage()
-      ),
+      // endDrawer: SizedBox(
+      //   width: MediaQuery.of(context).size.width,
+      //   child: const AlarmPage()
+      // ),
       body: IndexedStack(
         index: _index,
-        children: _pages,
+        children: [
+          CalendarPage(),
+          TimerPage(key: _timerPageKey),
+          SettingsPage(onTimeChanged: (value) {
+            _handleReset();
+          })
+        ],
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: FlutterLocalNotification.showNotification,
-      //   tooltip: '알람test',
-      //   child: const Icon(Icons.add),
-      // ),
       bottomNavigationBar: BottomNavigationBar(
         // showSelectedLabels: false,
         // showUnselectedLabels: false,

@@ -1,27 +1,23 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:ui';
 import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 import 'package:vibration/vibration.dart';
 import 'package:avatar_glow/avatar_glow.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:alarm/alarm.dart'; // 수정된 import
-import 'dart:io';
 import 'configuration.dart';
 import 'notification.dart';
 
 class TimerPage extends StatefulWidget {
-  const TimerPage({super.key});
+  const TimerPage({Key? key}) : super(key: key);
   
   @override
-  State<TimerPage> createState() => _TimerPageState();
+  State<TimerPage> createState() => TimerPageState();
 }
 
-class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixin {
-  static int workTimerSeconds = StaticVariableSet.timerTimeWork;
-  static int breakTimerSeconds = StaticVariableSet.timerTimeBreak;
-
+class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  int _currentTimerSeconds = workTimerSeconds;
+  int _currentTimerSeconds = StaticVariableSet.timerTimeWork;
   int _currentTimerIndex = 1;
 
   static const int alarmId = 1; // 알람 ID
@@ -41,7 +37,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: workTimerSeconds),
+      duration: Duration(seconds: StaticVariableSet.timerTimeWork),
     );
     _controller.value = 1.0;
     _controller.addListener(() {
@@ -51,7 +47,6 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
       if (status == AnimationStatus.dismissed) {
         // 타이머 완료 시 알람 울리기
         await _playAlarm();
-
         if (_currentTimerIndex == 1) {
           await showDialog(
             context: context,
@@ -61,8 +56,8 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                 _stopAlarm(); // 알람 정지
                 setState(() {
                   _currentTimerIndex = 2;
-                  _currentTimerSeconds = breakTimerSeconds;
-                  _controller.duration = Duration(seconds: breakTimerSeconds);
+                  _currentTimerSeconds = StaticVariableSet.timerTimeBreak;
+                  _controller.duration = Duration(seconds: StaticVariableSet.timerTimeBreak);
                   _controller.value = 1.0;
                   StaticVariableSet.myTimerColor = StaticVariableSet.myColorGreen;
                 });
@@ -145,8 +140,8 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
     _stopAlarm(); // 리셋 시 알람도 정지
     setState(() {
       _currentTimerIndex = 1;
-      _currentTimerSeconds = workTimerSeconds;
-      _controller.duration = Duration(seconds: workTimerSeconds);
+      _currentTimerSeconds = StaticVariableSet.timerTimeWork;
+      _controller.duration = Duration(seconds: StaticVariableSet.timerTimeWork);
       _controller.value = 1.0;
       StaticVariableSet.myTimerColor = StaticVariableSet.myColorBlue;
     });
@@ -172,7 +167,6 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 기존 UI 코드와 동일
             SleekCircularSlider(
               min: 0,
               max: _currentTimerSeconds.toDouble(),

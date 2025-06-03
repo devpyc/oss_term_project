@@ -1,9 +1,11 @@
+import 'dart:io' show Platform;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import 'main.dart';
+
 import 'configuration.dart'; // 전역 변수 import
-import 'dart:io' show Platform;
+
+import 'main.dart';
 
 // 안드로이드 관련 설정은 주석 처리 (어차피 안드로이드 권한 파일도 수정하지 않았음)
 
