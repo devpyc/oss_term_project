@@ -1,87 +1,183 @@
 import 'package:flutter/material.dart';
+import 'package:streakify/streakify.dart';
+import 'package:alarm/alarm.dart';
+import 'package:flutter/cupertino.dart';
+
+import 'configuration.dart';
+
+import 'main.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final ValueChanged<int> onTimeChanged;
+  const SettingsPage({required this.onTimeChanged, Key? key}) : super(key: key);
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool isDarkMode = false;
   String? selectedTheme = '기본 테마';
-  String? selectedSound = '벨소리 1';
-  String? selectedVibration = '보통';
-  TextEditingController customTimeController = TextEditingController(text: '25');
-  TextEditingController customTimeController2 = TextEditingController(text: '5');
-  
+  String? selectedSound;
+  TextEditingController customTimeController = TextEditingController();
+  TextEditingController customTimeController2 = TextEditingController();
 
   final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
-  final vibrations = ['없음', '약함', '보통', '강함'];
+
+  late FixedExtentScrollController _workController;
+  late FixedExtentScrollController _breakController;
+
+  @override
+  void initState() {
+    super.initState();
+    _workController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeWorkIndex);
+    _breakController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeBreakIndex);
+    _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _workController.dispose();
+    _breakController.dispose();
+    super.dispose();
+  }
+
+  _loadSettings() {
+    setState(() {
+      selectedSound = StaticVariableSet.selectedAlarmSound;
+      customTimeController.text = (StaticVariableSet.timerTimeWork ~/ 60).toString();
+      customTimeController2.text = (StaticVariableSet.timerTimeBreak ~/ 60).toString();
+    });
+  }
+
+  _previewAlarmSound(String soundName) async {
+    if (soundName == '끄기') return;
+
+    try {
+      await Alarm.stop(999);
+
+      final alarmSettings = AlarmSettings(
+        id: 999,
+        dateTime: DateTime.now(),
+        assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
+        loopAudio: false,
+        vibrate: false,
+        warningNotificationOnKill: false,
+        androidFullScreenIntent: false,
+        volumeSettings: VolumeSettings.fade(
+          volume: 0.5,
+          fadeDuration: Duration(seconds: 1),
+        ),
+        notificationSettings: NotificationSettings(
+          title: '미리보기',
+          body: soundName,
+        ),
+      );
+
+      await Alarm.set(alarmSettings: alarmSettings);
+
+      Future.delayed(Duration(seconds: 3), () {
+        Alarm.stop(999);
+      });
+
+    } catch (e) {
+      print('미리보기 오류: $e');
+    }
+  }
+
+  final int numberOfDays = 30;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('설정'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // _buildSectionTitle('스트릭 (Streak)'),
+          // _buildCard(child: _buildStreakSection()),
+
           _buildSectionTitle('화면'),
           _buildCard(
             child: SwitchListTile(
               title: const Text('다크모드'),
-              value: isDarkMode,
+              value: isDarkModeNotifier.value,
               onChanged: (val) {
-                setState(() => isDarkMode = val);
+                setState(() {
+                  isDarkModeNotifier.value = val;
+                });
               },
             ),
           ),
-          _buildCard(
-            child: ListTile(
-              title: const Text('테마 설정'),
-              trailing: DropdownButton<String>(
-                value: selectedTheme,
-                items: themes
-                    .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedTheme = val);
-                },
-              ),
-            ),
-          ),
+          // _buildCard(
+          //   child: ListTile(
+          //     title: const Text('테마 설정'),
+          //     trailing: DropdownButton<String>(
+          //       value: selectedTheme,
+          //       items: themes
+          //           .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
+          //           .toList(),
+          //       onChanged: (val) {
+          //         setState(() => selectedTheme = val);
+          //       },
+          //     ),
+          //   ),
+          // ),
 
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
           _buildCard(
-            child: ListTile(
-              title: const Text('알람 소리'),
-              trailing: DropdownButton<String>(
-                value: selectedSound,
-                items: sounds
-                    .map((sound) => DropdownMenuItem(value: sound, child: Text(sound)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedSound = val);
-                },
-              ),
-            ),
-          ),
-          _buildCard(
-            child: ListTile(
-              title: const Text('진동 정도'),
-              trailing: DropdownButton<String>(
-                value: selectedVibration,
-                items: vibrations
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() => selectedVibration = val);
-                },
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '알람 소리',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: DropdownButton<String>(
+                          value: selectedSound,
+                          isExpanded: true,
+                          items: sounds
+                              .map((sound) => DropdownMenuItem(value: sound, child: Text(sound)))
+                              .toList(),
+                          onChanged: (val) async {
+                            if (val != null) {
+                              setState(() => selectedSound = val);
+                              await StaticVariableSet.saveAlarmSound(val);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      if (selectedSound != null && selectedSound != '끄기')
+                        ElevatedButton.icon(
+                          onPressed: () => _previewAlarmSound(selectedSound!),
+                          icon: Icon(Icons.play_arrow, size: 18),
+                          label: Text('미리듣기'),
+                          style: ElevatedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (selectedSound == '끄기')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '알람 소리가 꺼져 있습니다',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -89,25 +185,50 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
           _buildCard(
-            child: ListTile(
-              title: const Text('집중 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('집중 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    scrollController: _workController,
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) async {
+                      setState(() {
+                        StaticVariableSet.timerTimeWorkIndex = index;
+                        StaticVariableSet.timerTimeWork = (index + 1) * 5 * 60;
+                      });
+                      widget.onTimeChanged((index + 1) * 5 * 60);
+                      await StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWorkIndex, StaticVariableSet.timerTimeBreakIndex);
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           _buildCard(
-            child: ListTile(
-              title: const Text('휴식 시간(분)'),
-              subtitle: TextField(
-                controller: customTimeController2,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('휴식 시간 (분)', style: TextStyle(fontSize: 16)),
+                SizedBox(
+                  height: 100,
+                  child: CupertinoPicker(
+                    scrollController: _breakController,
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) {
+                      setState(() {
+                        StaticVariableSet.timerTimeBreakIndex = index;
+                        StaticVariableSet.timerTimeBreak = (index + 1) * 5 * 60;
+                      });
+                      StaticVariableSet.saveTimerTimes(StaticVariableSet.timerTimeWorkIndex, StaticVariableSet.timerTimeBreakIndex);
+                    },
+                    children: List.generate(24, (i) => Center(child: Text('${(i + 1) * 5}분'))),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 
@@ -117,7 +238,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: ListTile(
               title: const Text('오픈소스 라이선스'),
               subtitle: Text(
-                '• flutter\n• provider\n• shared_preferences',
+                '• flutter\n• provider\n• shared_preferences\n• streakify',
                 style: TextStyle(color: Colors.grey),
               ),
             ),
@@ -133,7 +254,28 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // 섹션 제목 (예: 화면, 알림, 타이머 등)
+  Widget _buildStreakSection() {
+    return Center(
+      child: StreakifyWidget(
+        numberOfDays: 365,
+        crossAxisCount: 7, //세로
+        margin: const EdgeInsets.all(1),
+        isDayTargetReachedMap: Map.fromEntries(
+          List.generate(
+            numberOfDays,
+            (index) => MapEntry(index, index % 2 == 0 || index % 3 == 0),
+          ),
+        ),
+        height: 100,
+        width: 1050,
+        onTap: (index) {
+          // 날짜 박스 클릭 시 로직
+          debugPrint('Day tapped: $index');
+        },
+      ),
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -148,11 +290,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // 카드 형태의 리스트 항목 UI
   Widget _buildCard({required Widget child}) {
     return Card(
-      elevation: 2,//그림자 깊이
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),//카드 모서리 둥글게
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

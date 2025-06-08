@@ -1,36 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:flutter/services.dart';
+import 'package:alarm/alarm.dart';
 
 import 'configuration.dart';
+import 'notification.dart';
 
 import 'calendarPage.dart';
 import 'timerPage.dart';
 import 'settingsPage.dart';
-import 'alarmPage.dart';
+// import 'alarmPage.dart';
 
-void main() {
+final ValueNotifier<bool> isDarkModeNotifier = ValueNotifier(false); //다크모드
+
+StreamController<String> streamController = StreamController.broadcast();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp
   ]);
 
-  runApp(const MyApp());
+  await Alarm.init();
+  await StaticVariableSet.loadAllSettings();
+
+  FlutterLocalNotification.onBackgroundNotificationResponse();
+  
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  // const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Pomodoro Timer'),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isDarkModeNotifier,
+      builder: (context, isDarkMode, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Pomodoro Timer',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const MyHomePage(title: 'Pomodoro Timer'),
+        );
+      },
     );
   }
 }
@@ -46,41 +74,34 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<TimerPageState> _timerPageKey = GlobalKey<TimerPageState>();
+  
   var _index = 1;
 
-  int timercho = 0;
-  late Timer _timer;
+  void _handleReset() {
+    _timerPageKey.currentState?.reset();
+  }
 
-  void startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (timercho == 0) {
-        setState(() {
-          timer.cancel();
-        });
-      } else {
-        setState(() {
-          timercho--;
-        });
-      }
+  void onTimeChanged(int value) {
+    setState(() {
+      StaticVariableSet.timerTimeWork = value;
     });
   }
 
-  List<Widget> _pages = [
-    CalendarPage(),
-    TimerPage(),
-    SettingsPage()
-  ];
-
   @override
   void initState() {
+    FlutterLocalNotification.init();
+    Future.delayed(
+      const Duration(seconds: 3),
+      FlutterLocalNotification.requestNotificationPermission()
+    );
     super.initState();
-    startTimer();
   }
 
   @override
   void dispose() {
+    streamController.close();
     super.dispose();
-    _timer.cancel();
   }
 
   @override
@@ -94,25 +115,29 @@ class _MyHomePageState extends State<MyHomePage> {
         iconTheme: const IconThemeData(
           color: Colors.white,
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications),
-            onPressed: () {
-              _scaffoldKey.currentState?.openEndDrawer();
-            },
-          ),
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(Icons.notifications),
+        //     onPressed: () {
+        //       _scaffoldKey.currentState?.openEndDrawer();
+        //     },
+        //   ),
+        // ],
+      ),
+      // endDrawer: SizedBox(
+      //   width: MediaQuery.of(context).size.width,
+      //   child: const AlarmPage()
+      // ),
+      body: IndexedStack(
+        index: _index,
+        children: [
+          CalendarPage(),
+          TimerPage(key: _timerPageKey),
+          SettingsPage(onTimeChanged: (value) {
+            _handleReset();
+          })
         ],
       ),
-      endDrawer: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: const AlarmPage()
-      ),
-      body: _pages[_index],
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _incrementCounter,
-      //   tooltip: 'Increment',
-      //   child: const Icon(Icons.add),
-      // ),
       bottomNavigationBar: BottomNavigationBar(
         // showSelectedLabels: false,
         // showUnselectedLabels: false,
@@ -120,7 +145,6 @@ class _MyHomePageState extends State<MyHomePage> {
         onTap: (value) {
           setState(() {
             _index = value;
-            // print(_index);
           });
         },
         items: [
