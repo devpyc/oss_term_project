@@ -7,6 +7,7 @@ import 'package:avatar_glow/avatar_glow.dart';
 import 'package:alarm/alarm.dart'; // 수정된 import
 import 'configuration.dart';
 import 'notification.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({Key? key}) : super(key: key);
@@ -21,6 +22,9 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
   int _currentTimerIndex = 1;
 
   static const int alarmId = 1; // 알람 ID
+
+  final player = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
 
   bool get isRunning => _controller.isAnimating && _controller.value > 0;
 
@@ -55,6 +59,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
               onConfirm: () {
                 _stopAlarm(); // 알람 정지
                 setState(() {
+                  player.stop();
                   _currentTimerIndex = 2;
                   _currentTimerSeconds = StaticVariableSet.timerTimeBreak;
                   _controller.duration = Duration(seconds: StaticVariableSet.timerTimeBreak);
@@ -78,6 +83,11 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
           reset();
         }
       }
+    });
+    player.onPlayerStateChanged.listen((PlayerState state) {
+      setState(() {
+        _playerState = state;
+      });
     });
   }
 
@@ -122,15 +132,37 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
     }
   }
 
-  void start() {
+  // 집중 시간에만 배경 음악 재생 및 일시정지 후 다시 재생 시 이어서 재생
+  void startBackgroundSound() async {
+    if (_currentTimerIndex == 1) {
+      if (_playerState == PlayerState.stopped) {
+        await player.play(AssetSource(StaticVariableSet.getBackgroundSoundPath(StaticVariableSet.selectedBackgroundSound)));
+      } else {
+        await player.play(AssetSource(StaticVariableSet.getBackgroundSoundPath(StaticVariableSet.selectedBackgroundSound)));
+        // await player.resume();
+      }
+    }
+  }
+
+  // 반복 재생 설정
+  void loopBackgroundSound() {
+    player.onPlayerComplete.listen((event) {
+      startBackgroundSound(); // 파일이 끝나면 다시 재생
+    });
+  }
+
+  void start() async {
     if (_controller.isAnimating) return;
     _controller.reverse(from: _controller.value);
+    startBackgroundSound();
+    loopBackgroundSound();
     setState(() {});
   }
 
   void pause() {
     if (_controller.isAnimating) {
       _controller.stop();
+      player.pause();
       setState(() {});
     }
   }
@@ -138,6 +170,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
   void reset() {
     _controller.stop();
     _stopAlarm(); // 리셋 시 알람도 정지
+    player.stop();
     setState(() {
       _currentTimerIndex = 1;
       _currentTimerSeconds = StaticVariableSet.timerTimeWork;
@@ -157,6 +190,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
   void dispose() {
     _stopAlarm(); // 위젯 해제 시 알람 정지
     _controller.dispose();
+    player.dispose();
     super.dispose();
   }
 
