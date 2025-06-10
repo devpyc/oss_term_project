@@ -18,11 +18,13 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   String? selectedTheme = '기본 테마';
   String? selectedSound;
+  String? selectedBackgroundSound;
   TextEditingController customTimeController = TextEditingController();
   TextEditingController customTimeController2 = TextEditingController();
 
   final themes = ['기본 테마', '파란 테마', '녹색 테마'];
   final sounds = ['끄기', '벨소리 1', '벨소리 2', '벨소리 3'];
+  final backgroundSounds = ['끄기', 'WhiteNoise', 'Fire', 'Nature', 'Rain'];
 
   late FixedExtentScrollController _workController;
   late FixedExtentScrollController _breakController;
@@ -55,6 +57,7 @@ class _SettingsPageState extends State<SettingsPage> {
   _loadSettings() {
     setState(() {
       selectedSound = StaticVariableSet.selectedAlarmSound;
+      selectedBackgroundSound = StaticVariableSet.selectedBackgroundSound;
       customTimeController.text = (StaticVariableSet.timerTimeWork ~/ 60).toString();
       customTimeController2.text = (StaticVariableSet.timerTimeBreak ~/ 60).toString();
     });
@@ -66,6 +69,26 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isStreakLoading = true;
     });
+    
+    try {
+      await Alarm.stop(999);
+      final alarmSettings = AlarmSettings(
+        id: 999,
+        dateTime: DateTime.now(),
+        assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
+        loopAudio: false,
+        vibrate: false,
+        warningNotificationOnKill: false,
+        androidFullScreenIntent: false,
+        volumeSettings: VolumeSettings.fade(
+          volume: 0.5,
+          fadeDuration: Duration(seconds: 1),
+        ),
+        notificationSettings: NotificationSettings(
+          title: '미리보기',
+          body: soundName,
+        ),
+      );
 
     final daysInYear = _getDaysInCurrentYear();
     final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
@@ -190,7 +213,52 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-
+          _buildCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '배경 음악',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: DropdownButton<String>(
+                          value: selectedBackgroundSound,
+                          isExpanded: true,
+                          items: backgroundSounds
+                              .map((sound) => DropdownMenuItem(value: sound, child: Text(sound)))
+                              .toList(),
+                          onChanged: (val) async {
+                            if (val != null) {
+                              setState(() => selectedBackgroundSound = val);
+                              await StaticVariableSet.saveBackgroundSound(val);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (selectedBackgroundSound == '끄기')
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '배경 음악이 꺼져 있습니다',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           _buildSectionTitle('타이머'),
           _buildCard(

@@ -8,6 +8,7 @@ import 'package:alarm/alarm.dart';
 import 'configuration.dart';
 import 'notification.dart';
 import 'streak_manager.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({Key? key}) : super(key: key);
@@ -26,6 +27,9 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
 
   final StreakManager _streakManager = StreakManager();
   static const int alarmId = 1;
+
+  final player = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
 
   bool get isRunning => _controller.isAnimating && _controller.value > 0;
 
@@ -84,6 +88,50 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
         _fallbackVibration();
       }
     }
+    
+    });
+    _controller.addStatusListener((status) async {
+      if (status == AnimationStatus.dismissed) {
+        // 타이머 완료 시 알람 울리기
+        await _playAlarm();
+        if (_currentTimerIndex == 1) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => CountdownDialog(
+              onConfirm: () {
+                _stopAlarm(); // 알람 정지
+                setState(() {
+                  player.stop();
+                  _currentTimerIndex = 2;
+                  _currentTimerSeconds = StaticVariableSet.timerTimeBreak;
+                  _controller.duration = Duration(seconds: StaticVariableSet.timerTimeBreak);
+                  _controller.value = 1.0;
+                  StaticVariableSet.myTimerColor = StaticVariableSet.myColorGreen;
+                });
+                _controller.reverse(from: 1.0);
+              },
+              onTimeout: () {
+                _stopAlarm(); // 알람 정지
+                reset();
+              },
+            ),
+          );
+        } else if (_currentTimerIndex == 2) {
+          FlutterLocalNotification.showNotification();
+          // 3초 후 알람 자동 정지
+          Future.delayed(Duration(seconds: 3), () {
+            _stopAlarm();
+          });
+          reset();
+        }
+      }
+    });
+    player.onPlayerStateChanged.listen((PlayerState state) {
+      setState(() {
+        _playerState = state;
+      });
+    });
   }
 
   Future<void> _playAlarmSafely() async {
@@ -159,6 +207,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
       print('진동 오류: $e');
     }
   }
+
 
   Future<void> _showCompletionDialog() async {
     if (_isDisposed || !mounted) return;
@@ -236,7 +285,31 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
 
   void start() {
     if (_isDisposed || !mounted || _controller.isAnimating) return;
+  // 집중 시간에만 배경 음악 재생 및 일시정지 후 다시 재생 시 이어서 재생
+  void startBackgroundSound() async {
+    if (_currentTimerIndex == 1) {
+      if (_playerState == PlayerState.stopped) {
+        await player.play(AssetSource(StaticVariableSet.getBackgroundSoundPath(StaticVariableSet.selectedBackgroundSound)));
+      } else {
+        await player.play(AssetSource(StaticVariableSet.getBackgroundSoundPath(StaticVariableSet.selectedBackgroundSound)));
+        // await player.resume();
+      }
+    }
+  }
+
+  // 반복 재생 설정
+  void loopBackgroundSound() {
+    player.onPlayerComplete.listen((event) {
+      startBackgroundSound(); // 파일이 끝나면 다시 재생
+    });
+  }
+
+  void start() async {
+    if (_controller.isAnimating) return;
+
     _controller.reverse(from: _controller.value);
+    startBackgroundSound();
+    loopBackgroundSound();
     setState(() {});
   }
 
@@ -244,6 +317,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
     if (_isDisposed || !mounted) return;
     if (_controller.isAnimating) {
       _controller.stop();
+      player.pause();
       setState(() {});
     }
   }
@@ -253,6 +327,9 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
 
     _controller.stop();
     _stopAlarmSafely();
+
+    _stopAlarm(); // 리셋 시 알람도 정지
+    player.stop();
 
     setState(() {
       _currentTimerIndex = 1;
@@ -275,6 +352,7 @@ class TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixi
     WidgetsBinding.instance.removeObserver(this);
     _cleanup();
     _controller.dispose();
+    player.dispose();
     super.dispose();
   }
 

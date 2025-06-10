@@ -47,6 +47,7 @@ dependencies:
   timezone: ^0.10.1
   flutter_background_service: ^5.1.0
   alarm: ^5.1.4
+  audioplayers: ^6.4.0
 
 dev_dependencies:
   flutter_test:
