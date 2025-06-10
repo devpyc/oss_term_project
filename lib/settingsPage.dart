@@ -69,9 +69,35 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isStreakLoading = true;
     });
-    
+
+    try {
+      final daysInYear = _getDaysInCurrentYear();
+      final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
+      final streak = await _streakManager.getCurrentStreak();
+
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _completedDaysMap = completedMap;
+          _currentStreak = streak;
+          _isStreakLoading = false;
+        });
+      }
+    } catch (e) {
+      print('스트릭 데이터 로드 오류: $e');
+      if (!_isDisposed && mounted) {
+        setState(() {
+          _isStreakLoading = false;
+        });
+      }
+    }
+  }
+
+  _previewAlarmSound(String soundName) async {
+    if (soundName == '끄기') return;
+
     try {
       await Alarm.stop(999);
+
       final alarmSettings = AlarmSettings(
         id: 999,
         dateTime: DateTime.now(),
@@ -90,47 +116,14 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
 
-    final daysInYear = _getDaysInCurrentYear();
-    final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
-    final streak = await _streakManager.getCurrentStreak();
+      await Alarm.set(alarmSettings: alarmSettings);
 
-    if (!_isDisposed && mounted) {
-      setState(() {
-        _completedDaysMap = completedMap;
-        _currentStreak = streak;
-        _isStreakLoading = false;
+      Future.delayed(Duration(seconds: 3), () {
+        Alarm.stop(999);
       });
+    } catch (e) {
+      print('알람 미리보기 오류: $e');
     }
-  }
-
-  _previewAlarmSound(String soundName) async {
-    if (soundName == '끄기') return;
-
-    await Alarm.stop(999);
-
-    final alarmSettings = AlarmSettings(
-      id: 999,
-      dateTime: DateTime.now(),
-      assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
-      loopAudio: false,
-      vibrate: false,
-      warningNotificationOnKill: false,
-      androidFullScreenIntent: false,
-      volumeSettings: VolumeSettings.fade(
-        volume: 0.5,
-        fadeDuration: Duration(seconds: 1),
-      ),
-      notificationSettings: NotificationSettings(
-        title: '미리보기',
-        body: soundName,
-      ),
-    );
-
-    await Alarm.set(alarmSettings: alarmSettings);
-
-    Future.delayed(Duration(seconds: 3), () {
-      Alarm.stop(999);
-    });
   }
 
   @override
