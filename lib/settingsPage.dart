@@ -27,11 +27,11 @@ class _SettingsPageState extends State<SettingsPage> {
   late FixedExtentScrollController _workController;
   late FixedExtentScrollController _breakController;
 
-  // 스트릭 관련 변수
   final StreakManager _streakManager = StreakManager();
-  Map<int, bool> _completedDaysMap = {};
+  Map<int, bool> _completedDaysMap = <int, bool>{};
   bool _isStreakLoading = true;
   int _currentStreak = 0;
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -44,8 +44,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _workController.dispose();
     _breakController.dispose();
+    customTimeController.dispose();
+    customTimeController2.dispose();
     super.dispose();
   }
 
@@ -57,21 +60,21 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  // 스트릭 데이터 로드
   Future<void> _loadStreakData() async {
-    try {
-      final daysInYear = _getDaysInCurrentYear();
-      final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
-      final streak = await _streakManager.getCurrentStreak();
+    if (_isDisposed || !mounted) return;
 
+    setState(() {
+      _isStreakLoading = true;
+    });
+
+    final daysInYear = _getDaysInCurrentYear();
+    final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
+    final streak = await _streakManager.getCurrentStreak();
+
+    if (!_isDisposed && mounted) {
       setState(() {
         _completedDaysMap = completedMap;
         _currentStreak = streak;
-        _isStreakLoading = false;
-      });
-    } catch (e) {
-      print('스트릭 데이터 로드 오류: $e');
-      setState(() {
         _isStreakLoading = false;
       });
     }
@@ -80,36 +83,31 @@ class _SettingsPageState extends State<SettingsPage> {
   _previewAlarmSound(String soundName) async {
     if (soundName == '끄기') return;
 
-    try {
-      await Alarm.stop(999);
+    await Alarm.stop(999);
 
-      final alarmSettings = AlarmSettings(
-        id: 999,
-        dateTime: DateTime.now(),
-        assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
-        loopAudio: false,
-        vibrate: false,
-        warningNotificationOnKill: false,
-        androidFullScreenIntent: false,
-        volumeSettings: VolumeSettings.fade(
-          volume: 0.5,
-          fadeDuration: Duration(seconds: 1),
-        ),
-        notificationSettings: NotificationSettings(
-          title: '미리보기',
-          body: soundName,
-        ),
-      );
+    final alarmSettings = AlarmSettings(
+      id: 999,
+      dateTime: DateTime.now(),
+      assetAudioPath: StaticVariableSet.getAlarmSoundPath(soundName),
+      loopAudio: false,
+      vibrate: false,
+      warningNotificationOnKill: false,
+      androidFullScreenIntent: false,
+      volumeSettings: VolumeSettings.fade(
+        volume: 0.5,
+        fadeDuration: Duration(seconds: 1),
+      ),
+      notificationSettings: NotificationSettings(
+        title: '미리보기',
+        body: soundName,
+      ),
+    );
 
-      await Alarm.set(alarmSettings: alarmSettings);
+    await Alarm.set(alarmSettings: alarmSettings);
 
-      Future.delayed(Duration(seconds: 3), () {
-        Alarm.stop(999);
-      });
-
-    } catch (e) {
-      print('미리보기 오류: $e');
-    }
+    Future.delayed(Duration(seconds: 3), () {
+      Alarm.stop(999);
+    });
   }
 
   @override
@@ -257,7 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildCard(
             child: const ListTile(
               title: Text('앱 버전'),
-              trailing: Text('v1.0.0', style: TextStyle(color: Colors.grey)),
+              trailing: Text('v1.1', style: TextStyle(color: Colors.grey)),
             ),
           ),
         ],
@@ -268,7 +266,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildStreakSection() {
     return Column(
       children: [
-        // 스트릭 정보 헤더
         Padding(
           padding: EdgeInsets.all(16),
           child: Row(
@@ -281,14 +278,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
 
-        // 연도 표시
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${DateTime.now().year}년 기록',
+                '${DateTime.now().year}년',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -306,34 +302,18 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
 
-        // 로딩 상태 처리
         if (_isStreakLoading)
           Container(
             height: 120,
             child: Center(child: CircularProgressIndicator()),
           )
         else
-        // 스트릭 캘린더
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: StreakifyWidget(
-              numberOfDays: _getDaysInCurrentYear(),
-              crossAxisCount: 7,
-              margin: const EdgeInsets.all(1),
-              isDayTargetReachedMap: _completedDaysMap,
-              height: 120,
-              width: _getDaysInCurrentYear() * 15.0,
-              onTap: (index) {
-                _showDayInfo(index);
-              },
-            ),
-          ),
+          _buildStreakCalendar(),
 
-        // 새로고침 버튼
         Padding(
           padding: EdgeInsets.all(16),
           child: ElevatedButton.icon(
-            onPressed: _loadStreakData,
+            onPressed: _isStreakLoading ? null : _loadStreakData,
             icon: Icon(Icons.refresh, size: 18),
             label: Text('새로고침'),
             style: ElevatedButton.styleFrom(
@@ -342,6 +322,44 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStreakCalendar() {
+    final daysInYear = _getDaysInCurrentYear();
+
+    if (_completedDaysMap.isEmpty) {
+      return Container(
+        height: 120,
+        child: Center(
+          child: Text(
+            '데이터를 불러오는 중...',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    final calculatedWidth = (daysInYear * 15.0).clamp(300.0, 1200.0);
+
+    return Container(
+      height: 120,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: StreakifyWidget(
+          numberOfDays: daysInYear,
+          crossAxisCount: 7,
+          margin: const EdgeInsets.all(1),
+          isDayTargetReachedMap: _completedDaysMap,
+          height: 120,
+          width: calculatedWidth,
+          onTap: (index) {
+            if (index >= 0 && index < daysInYear && !_isDisposed && mounted) {
+              _showDayInfo(index);
+            }
+          },
+        ),
+      ),
     );
   }
 
@@ -377,15 +395,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showDayInfo(int index) {
+    if (_isDisposed || !mounted) return;
+
     final now = DateTime.now();
     final currentYear = now.year;
     final startOfYear = DateTime(currentYear, 1, 1);
     final selectedDate = startOfYear.add(Duration(days: index));
     final isCompleted = _completedDaysMap[index] ?? false;
 
-    // 요일 표시를 위한 배열
     final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-    final weekday = weekdays[selectedDate.weekday - 1];
+    final weekdayIndex = (selectedDate.weekday - 1).clamp(0, 6);
+    final weekday = weekdays[weekdayIndex];
 
     showDialog(
       context: context,
@@ -404,7 +424,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             SizedBox(height: 12),
             Text(
-              isCompleted ? '집중 시간을 완료했습니다!' : '아직 완료하지 않았습니다',
+              isCompleted ? '오늘 집중을 완료했습니다!' : '아직 완료하지 않았습니다',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -434,29 +454,24 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // 현재 연도의 총 일수 계산
   int _getDaysInCurrentYear() {
     final now = DateTime.now();
     final currentYear = now.year;
-
-    // 윤년 확인
     bool isLeapYear = (currentYear % 4 == 0 && currentYear % 100 != 0) || (currentYear % 400 == 0);
     return isLeapYear ? 366 : 365;
   }
 
-  // 현재 연도 범위 표시
   String _getCurrentYearRange() {
     final currentYear = DateTime.now().year;
     return '${currentYear}.01.01 ~ ${currentYear}.12.31';
   }
 
-  // 이번 달 카운트
   int _getThisMonthCount() {
     final now = DateTime.now();
     int count = 0;
 
     _completedDaysMap.forEach((index, isCompleted) {
-      if (isCompleted) {
+      if (isCompleted == true) {
         final currentYear = now.year;
         final startOfYear = DateTime(currentYear, 1, 1);
         final date = startOfYear.add(Duration(days: index));
@@ -469,9 +484,8 @@ class _SettingsPageState extends State<SettingsPage> {
     return count;
   }
 
-  // 올해 전체 카운트
   int _getThisYearCount() {
-    return _completedDaysMap.values.where((completed) => completed).length;
+    return _completedDaysMap.values.where((completed) => completed == true).length;
   }
 
   Widget _buildSectionTitle(String title) {
