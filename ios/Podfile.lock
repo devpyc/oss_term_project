@@ -1,6 +1,8 @@
 PODS:
   - alarm (0.0.1):
     - Flutter
+  - audioplayers_darwin (0.0.1):
+    - Flutter
   - device_info_plus (0.0.1):
     - Flutter
   - Flutter (1.0.0)
@@ -10,6 +12,9 @@ PODS:
     - Flutter
   - flutter_local_notifications (0.0.1):
     - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
   - shared_preferences_foundation (0.0.1):
@@ -20,11 +25,13 @@ PODS:
 
 DEPENDENCIES:
   - alarm (from `.symlinks/plugins/alarm/ios`)
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
   - flutter_background_service_ios (from `.symlinks/plugins/flutter_background_service_ios/ios`)
   - flutter_fgbg (from `.symlinks/plugins/flutter_fgbg/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vibration (from `.symlinks/plugins/vibration/ios`)
@@ -32,6 +39,8 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   alarm:
     :path: ".symlinks/plugins/alarm/ios"
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/ios"
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
   Flutter:
@@ -42,6 +51,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_fgbg/ios"
   flutter_local_notifications:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   shared_preferences_foundation:
@@ -50,15 +61,17 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/vibration/ios"
 
 SPEC CHECKSUMS:
-  alarm: fbab5e1f7ebfc24011477cdedc8bd2388dff32b9
-  device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
+  alarm: 9ff6d2dae9bd69c4022622f7e0a1e9c1dd70064e
+  audioplayers_darwin: ccf9c770ee768abb07e26d90af093f7bab1c12ab
+  device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  flutter_background_service_ios: e30e0d3ee69e4cee66272d0c78eacd48c2e94aac
-  flutter_fgbg: 31c0d1140a131daea2d342121808f6aa0dcd879d
-  flutter_local_notifications: ff50f8405aaa0ccdc7dcfb9022ca192e8ad9688f
-  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
-  shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
-  vibration: 3797858f8cbf53d841e189ef8bd533d96e4ca93c
+  flutter_background_service_ios: 00d31bdff7b4bfe06d32375df358abe0329cf87e
+  flutter_fgbg: d3da78df78454b1808f0829a5da9cd17dfe16444
+  flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
+  vibration: 69774ad57825b11c951ee4c46155f455d7a592ce
 
 PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
 

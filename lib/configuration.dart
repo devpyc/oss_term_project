@@ -22,6 +22,7 @@ class StaticVariableSet extends ChangeNotifier {
   /// 모든 설정 불러오기 (앱 시작시 호출)
   static Future<void> loadAllSettings() async {
     await loadAlarmSound();
+    await loadBackgroundSound();
     await loadVibration();
     await loadTimerTimes();
   }
@@ -46,6 +47,8 @@ class StaticVariableSet extends ChangeNotifier {
 
   /// 현재 선택된 알람 소리
   static String selectedAlarmSound = '벨소리 1';
+  /// 현재 선택된 알람 소리
+  static String selectedBackgroundSound = 'WhiteNoise';
   /// 현재 선택된 진동 강도
   static String selectedVibration = '보통';
 
@@ -83,6 +86,7 @@ class StaticVariableSet extends ChangeNotifier {
 
   // 알람 관련 키들
   static const String ALARM_SOUND_KEY = 'alarm_sound';
+  static const String BACKGROUND_SOUND_KEY = 'background_sound';
   static const String ALARM_VIBRATION_KEY = 'alarm_vibration';
   static const String TIMER_WORK_TIME_KEY = 'timer_work_time';
   static const String TIMER_BREAK_TIME_KEY = 'timer_break_time';
@@ -100,6 +104,19 @@ class StaticVariableSet extends ChangeNotifier {
   static Future<void> loadAlarmSound() async {
     final prefs = await SharedPreferences.getInstance();
     selectedAlarmSound = prefs.getString(ALARM_SOUND_KEY) ?? '벨소리 1';
+  }
+
+  /// 배경 음악 설정 저장
+  static Future<void> saveBackgroundSound(String sound) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(BACKGROUND_SOUND_KEY, sound);
+    selectedBackgroundSound = sound;
+  }
+
+  /// 배경 음악 설정 불러오기
+  static Future<void> loadBackgroundSound() async {
+    final prefs = await SharedPreferences.getInstance();
+    selectedBackgroundSound = prefs.getString(BACKGROUND_SOUND_KEY) ?? 'WhiteNoise';
   }
 
   /// 진동 설정 저장
@@ -130,6 +147,24 @@ class StaticVariableSet extends ChangeNotifier {
       case '끄기':
       default:
         return 'assets/alarm1.mp3'; // 기본값
+    }
+  }
+
+  /// 배경 음악에 따른 파일 경로 반환
+  static String getBackgroundSoundPath(String soundName) {
+    switch (soundName) {
+      case 'WhiteNoise':
+        return 'whitenoise.mp3';
+      case 'Fire':
+        return 'fire.mp3';
+      case 'Nature':
+        return 'outdoor.mp3';
+      case 'Rain':
+        return 'heavy-rain.mp3';
+      case '끄기':
+        return '';
+      default:
+        return 'whitenoise.mp3'; // 기본값
     }
   }
 
