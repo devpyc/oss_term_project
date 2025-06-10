@@ -4,7 +4,7 @@ import 'package:alarm/alarm.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'configuration.dart';
-
+import 'streak_manager.dart';
 import 'main.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -27,12 +27,19 @@ class _SettingsPageState extends State<SettingsPage> {
   late FixedExtentScrollController _workController;
   late FixedExtentScrollController _breakController;
 
+  // 스트릭 관련 변수
+  final StreakManager _streakManager = StreakManager();
+  Map<int, bool> _completedDaysMap = {};
+  bool _isStreakLoading = true;
+  int _currentStreak = 0;
+
   @override
   void initState() {
     super.initState();
     _workController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeWorkIndex);
     _breakController = FixedExtentScrollController(initialItem: StaticVariableSet.timerTimeBreakIndex);
     _loadSettings();
+    _loadStreakData();
   }
 
   @override
@@ -48,6 +55,26 @@ class _SettingsPageState extends State<SettingsPage> {
       customTimeController.text = (StaticVariableSet.timerTimeWork ~/ 60).toString();
       customTimeController2.text = (StaticVariableSet.timerTimeBreak ~/ 60).toString();
     });
+  }
+
+  // 스트릭 데이터 로드
+  Future<void> _loadStreakData() async {
+    try {
+      final daysInYear = _getDaysInCurrentYear();
+      final completedMap = await _streakManager.getCompletedDaysMapForCurrentYear(daysInYear);
+      final streak = await _streakManager.getCurrentStreak();
+
+      setState(() {
+        _completedDaysMap = completedMap;
+        _currentStreak = streak;
+        _isStreakLoading = false;
+      });
+    } catch (e) {
+      print('스트릭 데이터 로드 오류: $e');
+      setState(() {
+        _isStreakLoading = false;
+      });
+    }
   }
 
   _previewAlarmSound(String soundName) async {
@@ -85,16 +112,14 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  final int numberOfDays = 30;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // _buildSectionTitle('스트릭 (Streak)'),
-          // _buildCard(child: _buildStreakSection()),
+          _buildSectionTitle('스트릭 (Streak)'),
+          _buildCard(child: _buildStreakSection()),
 
           _buildSectionTitle('화면'),
           _buildCard(
@@ -108,20 +133,6 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
-          // _buildCard(
-          //   child: ListTile(
-          //     title: const Text('테마 설정'),
-          //     trailing: DropdownButton<String>(
-          //       value: selectedTheme,
-          //       items: themes
-          //           .map((theme) => DropdownMenuItem(value: theme, child: Text(theme)))
-          //           .toList(),
-          //       onChanged: (val) {
-          //         setState(() => selectedTheme = val);
-          //       },
-          //     ),
-          //   ),
-          // ),
 
           const SizedBox(height: 24),
           _buildSectionTitle('알림'),
@@ -255,25 +266,212 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildStreakSection() {
-    return Center(
-      child: StreakifyWidget(
-        numberOfDays: 365,
-        crossAxisCount: 7, //세로
-        margin: const EdgeInsets.all(1),
-        isDayTargetReachedMap: Map.fromEntries(
-          List.generate(
-            numberOfDays,
-            (index) => MapEntry(index, index % 2 == 0 || index % 3 == 0),
+    return Column(
+      children: [
+        // 스트릭 정보 헤더
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildStatCard('현재 연속', '$_currentStreak일', Colors.orange),
+              _buildStatCard('이번 달', '${_getThisMonthCount()}일', Colors.blue),
+              _buildStatCard('올해', '${_getThisYearCount()}일', Colors.green),
+            ],
           ),
         ),
-        height: 100,
-        width: 1050,
-        onTap: (index) {
-          // 날짜 박스 클릭 시 로직
-          debugPrint('Day tapped: $index');
-        },
+
+        // 연도 표시
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${DateTime.now().year}년 기록',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
+                ),
+              ),
+              Text(
+                _getCurrentYearRange(),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 로딩 상태 처리
+        if (_isStreakLoading)
+          Container(
+            height: 120,
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else
+        // 스트릭 캘린더
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: StreakifyWidget(
+              numberOfDays: _getDaysInCurrentYear(),
+              crossAxisCount: 7,
+              margin: const EdgeInsets.all(1),
+              isDayTargetReachedMap: _completedDaysMap,
+              height: 120,
+              width: _getDaysInCurrentYear() * 15.0,
+              onTap: (index) {
+                _showDayInfo(index);
+              },
+            ),
+          ),
+
+        // 새로고침 버튼
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: ElevatedButton.icon(
+            onPressed: _loadStreakData,
+            icon: Icon(Icons.refresh, size: 18),
+            label: Text('새로고침'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _showDayInfo(int index) {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final startOfYear = DateTime(currentYear, 1, 1);
+    final selectedDate = startOfYear.add(Duration(days: index));
+    final isCompleted = _completedDaysMap[index] ?? false;
+
+    // 요일 표시를 위한 배열
+    final weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    final weekday = weekdays[selectedDate.weekday - 1];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '${selectedDate.year}년 ${selectedDate.month}월 ${selectedDate.day}일 ($weekday)',
+          style: TextStyle(fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isCompleted ? Icons.check_circle : Icons.cancel,
+              color: isCompleted ? Colors.green : Colors.grey,
+              size: 48,
+            ),
+            SizedBox(height: 12),
+            Text(
+              isCompleted ? '집중 시간을 완료했습니다!' : '아직 완료하지 않았습니다',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: isCompleted ? Colors.green : Colors.grey[600],
+              ),
+            ),
+            if (selectedDate.isAfter(DateTime.now()))
+              Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  '(미래 날짜)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 현재 연도의 총 일수 계산
+  int _getDaysInCurrentYear() {
+    final now = DateTime.now();
+    final currentYear = now.year;
+
+    // 윤년 확인
+    bool isLeapYear = (currentYear % 4 == 0 && currentYear % 100 != 0) || (currentYear % 400 == 0);
+    return isLeapYear ? 366 : 365;
+  }
+
+  // 현재 연도 범위 표시
+  String _getCurrentYearRange() {
+    final currentYear = DateTime.now().year;
+    return '${currentYear}.01.01 ~ ${currentYear}.12.31';
+  }
+
+  // 이번 달 카운트
+  int _getThisMonthCount() {
+    final now = DateTime.now();
+    int count = 0;
+
+    _completedDaysMap.forEach((index, isCompleted) {
+      if (isCompleted) {
+        final currentYear = now.year;
+        final startOfYear = DateTime(currentYear, 1, 1);
+        final date = startOfYear.add(Duration(days: index));
+        if (date.month == now.month && date.year == now.year) {
+          count++;
+        }
+      }
+    });
+
+    return count;
+  }
+
+  // 올해 전체 카운트
+  int _getThisYearCount() {
+    return _completedDaysMap.values.where((completed) => completed).length;
   }
 
   Widget _buildSectionTitle(String title) {
